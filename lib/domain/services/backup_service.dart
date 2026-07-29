@@ -70,7 +70,9 @@ class BackupService {
 
   Future<void> shareExport() async {
     final file = await createExportFile();
-    await Share.shareXFiles([XFile(file.path)], text: 'Backup data CycleCare');
+    await SharePlus.instance.share(
+      ShareParams(files: [XFile(file.path)], text: 'Backup data CycleCare'),
+    );
   }
 
   Future<void> importFromPicker({required bool replaceExisting}) async {
