@@ -12,8 +12,5 @@ class SyncService {
 }
 
 SyncRepository createSyncRepository(
-    {required AppDatabase database, required SupabaseClient? client}) {
-  return client == null
-      ? const LocalSyncRepository()
-      : SupabaseSyncRepository(database, client);
-}
+    {required AppDatabase database, required SupabaseClient client}) =>
+    SupabaseSyncRepository(database, client);

@@ -22,7 +22,7 @@ class OnboardingPage extends StatelessWidget {
                   'Catat period secara pribadi, offline, dan tanpa klaim medis.'),
               const SizedBox(height: 24),
               const Text(
-                  'Data utama disimpan di perangkat. Cloud backup bersifat opsional dan tidak aktif tanpa konfigurasi.'),
+                  'Data ditampilkan dari cache perangkat dan disinkronkan secara aman ke akun Supabase.'),
               const Spacer(),
               SizedBox(
                   width: double.infinity,

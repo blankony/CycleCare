@@ -8,7 +8,7 @@ CycleCare adalah aplikasi pencatat period pribadi berbahasa Indonesia. Aplikasi 
 - Riverpod sebagai dependency injection dan state aplikasi.
 - Domain murni Dart untuk prediksi robust-weighted dan klasifikasi EARLY/ON_WINDOW/LATE.
 - Drift/SQLite sebagai sumber data lokal offline-first.
-- Supabase opsional untuk login email/password dan sinkronisasi milik pengguna.
+- Supabase wajib untuk autentikasi email/password dan penyimpanan cloud kanonis.
 - Layanan terpisah untuk notifikasi, biometrik, backup, logging, dan sinkronisasi.
 
 Folder utama:
@@ -22,7 +22,7 @@ lib/
   domain/entities/     immutable records and enums
   domain/services/     prediction, classification, recalculation, privacy, backup
   features/            dashboard, form, calendar, history, settings, auth, lock
-supabase/migrations/   optional SQL schema and RLS
+supabase/migrations/   schema cloud, indeks, dan RLS
 ```
 
 ## Requirements
@@ -46,11 +46,7 @@ flutter run
 
 The database file is named `cycle_care.sqlite` in the platform application-support directory. It is local data and is ignored by Git.
 
-### Run without Supabase
-
-No configuration is required. Local period tracking, prediction, history, calendar, settings, and local backup remain available without login or internet.
-
-### Run with Supabase
+### Konfigurasi Supabase wajib
 
 Create a local `.env` file from `.env.example` and fill in the Supabase project URL and publishable/anon key:
 
@@ -68,9 +64,11 @@ flutter run
 
 `SUPABASE_ANON_KEY` is the client publishable/anon key. Never use a `service_role` key in Flutter and never commit `.env` or real values. The app loads `.env` at startup.
 
+Jika `.env` tidak tersedia, nilainya kosong, atau inisialisasi Supabase gagal, aplikasi menampilkan layar konfigurasi berbahasa Indonesia dan tidak membuka tracker. Instalasi baru juga harus login dan menyelesaikan sinkronisasi awal sebelum data kesehatan dapat diakses.
+
 ## Local-first behavior
 
-A local write is committed to Drift first, the UI updates immediately, and a stable UUID-backed sync queue item is created. Cloud sync is optional and never blocks recording a period. The optional sync repository performs idempotent upserts, keeps failed queue items, records attempts, pulls remote rows, and uses latest `updated_at` wins while preserving soft deletions. Device clock differences remain a known limitation.
+A local write is committed to Drift first, the UI updates immediately, and a stable UUID-backed sync queue item is created. Supabase is the canonical synchronized store, while Drift remains the responsive cache and temporary offline store after a successful authenticated setup. Pending local edits are pushed before remote rows can replace them, queue entries are deduplicated per entity, pulls are scoped by user ID, and soft deletion is preserved. Device clock differences remain a known limitation.
 
 ## Prediction algorithm
 
@@ -111,7 +109,8 @@ Biometric lock is not enabled automatically. The service checks device support, 
 3. Keep Row Level Security enabled.
 4. Copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
 5. Run the app normally with `flutter run`.
-6. Log in from Pengaturan > Cloud backup.
+6. Log in from the startup authentication screen and complete the initial sync gate.
+7. Deploy `supabase/functions/delete-account` when account deletion is required.
 
 Every cloud-owned row uses `auth.uid() = user_id`; profiles use `auth.uid() = id`. Supabase credentials, tokens, and service-role keys are never included in local JSON backup.
 
@@ -119,7 +118,7 @@ Every cloud-owned row uses `auth.uid() = user_id`; profiles use `auth.uid() = id
 
 Export creates JSON containing `schemaVersion`, `exportedAt`, `periodEntries`, `predictions`, and `settings`, then uses the platform share sheet. Import validates schema version and required fields and currently uses an explicit replace flow inside a database transaction. JSON backups are unencrypted and contain sensitive health information; store them carefully. Encryption is a known limitation.
 
-Delete-all-data requires two confirmations, clears local periods/predictions/settings/sync queue, cancels local notifications, and does not delete a Supabase account.
+Delete-all-local-data requires two confirmations and clears local periods, daily logs, predictions, settings, and the sync queue. Account deletion uses the authenticated `delete-account` Edge Function, then clears the current user's local cache and reminders without exposing a service-role key to Flutter.
 
 ## Testing and quality
 
@@ -130,6 +129,9 @@ The tests cover:
 - Early/on-window/late boundaries and signed variance.
 - Drift repository duplicate/future/end-date validation, duration, cycle length, soft delete, and restore.
 - Dashboard empty state, confirmation dialog, bottom navigation, and unavailable cloud state.
+- Mandatory bootstrap configuration states and required provider graph.
+- Authenticated route redirects, initial-sync retry, temporary offline access, and expired sessions.
+- Drift version 1 to version 2 migration, user isolation, sync conflict handling, soft deletion, and daily-flow sync foundations.
 
 Run:
 

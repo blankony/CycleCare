@@ -2,11 +2,13 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../core/date/date_only.dart';
 import '../../../data/local/database.dart';
+import '../../../domain/entities/sync_state.dart';
 
 class SettingsPage extends ConsumerWidget {
   const SettingsPage({super.key});
@@ -15,9 +17,9 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final settings =
         ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
-    final client = ref.watch(supabaseClientProvider);
-    ref.watch(authenticationStateProvider);
-    final currentUser = ref.watch(authRepositoryProvider)?.currentUser;
+    final currentUser = ref.watch(authSessionProvider).user;
+    final sync = ref.watch(syncControllerProvider);
+    final syncSnapshot = sync.snapshot;
     final reminderEnabled = settings['reminder_enabled'] == 'true';
     final biometricEnabled = settings['biometric_enabled'] == 'true';
     return Scaffold(
@@ -49,31 +51,47 @@ class SettingsPage extends ConsumerWidget {
               ListTile(
                 leading: const Icon(Icons.cloud_outlined),
                 title: const Text('Cloud backup'),
-                subtitle: Text(client == null
-                    ? 'Tidak tersedia tanpa konfigurasi Supabase'
-                    : currentUser == null
-                        ? 'Masuk atau daftar untuk mengaktifkan backup'
-                        : 'Masuk sebagai ${currentUser.email ?? 'akun Supabase'}'),
-                trailing: client == null
-                    ? const Chip(label: Text('Segera hadir'))
-                    : const Icon(Icons.chevron_right),
-                onTap: client == null ? null : () => context.push('/login'),
+                subtitle: Text(
+                    'Masuk sebagai ${currentUser?.email ?? 'akun Supabase'}'),
+                trailing: Chip(label: Text(syncSnapshot.status.label)),
+                onTap: () => _sync(context, ref),
               ),
               ListTile(
                 leading: const Icon(Icons.sync),
-                title: const Text('Sinkronisasi manual'),
-                subtitle: Text(client == null
-                    ? 'Konfigurasi Supabase diperlukan'
-                    : 'Ketuk untuk mencoba sinkronisasi'),
-                trailing: client == null
-                    ? const Chip(label: Text('Segera hadir'))
-                    : const Icon(Icons.chevron_right),
-                onTap: client == null ? null : () => _sync(context, ref),
+                title: Text(syncSnapshot.status == SyncGateStatus.failed
+                    ? 'Coba lagi'
+                    : 'Sinkronkan sekarang'),
+                subtitle: Text(
+                    '${syncSnapshot.pendingCount} perubahan menunggu sinkronisasi'),
+                trailing: const Icon(Icons.refresh),
+                onTap: () => _sync(context, ref),
+              ),
+              ListTile(
+                leading: const Icon(Icons.schedule),
+                title: const Text('Sinkronisasi terakhir'),
+                subtitle: Text(syncSnapshot.lastSuccessfulSyncAt == null
+                    ? 'Belum pernah berhasil'
+                    : DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(
+                        syncSnapshot.lastSuccessfulSyncAt!.toLocal())),
               ),
               ListTile(
                 leading: const Icon(Icons.delete_sweep_outlined),
                 title: const Text('Catatan terarsip'),
                 onTap: () => _showDeleted(context, ref),
+              ),
+              ListTile(
+                leading: const Icon(Icons.logout),
+                title: const Text('Keluar dari akun'),
+                onTap: () => _logout(context, ref),
+              ),
+              ListTile(
+                leading: Icon(Icons.person_remove_outlined,
+                    color: Theme.of(context).colorScheme.error),
+                title: const Text('Hapus akun cloud'),
+                subtitle: const Text(
+                    'Menghapus akun dan seluruh data cloud serta cache lokal.'),
+                textColor: Theme.of(context).colorScheme.error,
+                onTap: () => _deleteAccount(context, ref),
               ),
             ]),
           ),
@@ -114,7 +132,7 @@ class SettingsPage extends ConsumerWidget {
                   leading: Icon(Icons.privacy_tip_outlined),
                   title: Text('Privasi'),
                   subtitle: Text(
-                      'Data period disimpan lokal dan tidak dikirim tanpa konfigurasi cloud.')),
+                      'Data period disimpan lokal dan disinkronkan hanya ke akun Supabase ini.')),
               const ListTile(
                   leading: Icon(Icons.info_outline),
                   title: Text('Tentang CycleCare'),
@@ -167,13 +185,48 @@ class SettingsPage extends ConsumerWidget {
   }
 
   Future<void> _sync(BuildContext context, WidgetRef ref) async {
-    final result = await ref.read(syncServiceProvider).synchronize();
+    await ref.read(syncControllerProvider).synchronizeNow();
     if (!context.mounted) return;
-    final message = result.skipped
-        ? 'Sinkronisasi tidak aktif.'
-        : 'Sinkronisasi selesai: ${result.synced} berhasil, ${result.failed} gagal.';
+    final snapshot = ref.read(syncControllerProvider).snapshot;
+    final message = snapshot.status == SyncGateStatus.ready
+        ? 'Sinkronisasi selesai.'
+        : snapshot.status.label;
     ScaffoldMessenger.of(context)
         .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  Future<void> _logout(BuildContext context, WidgetRef ref) async {
+    await ref.read(authRepositoryProvider).signOut();
+    if (context.mounted) context.go('/login');
+  }
+
+  Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Hapus akun cloud?'),
+        content: const Text(
+            'Akun Supabase, data cloud, cache lokal, dan pengingat akan dihapus. Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus akun')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+    try {
+      await ref.read(accountDeletionServiceProvider).deleteAccount();
+      if (context.mounted) context.go('/login');
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Penghapusan akun gagal: $error')));
+      }
+    }
   }
 
   Future<void> _setSetting(WidgetRef ref, String key, String value) async {

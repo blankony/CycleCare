@@ -24,14 +24,18 @@ abstract interface class PeriodRepository {
 }
 
 class DriftPeriodRepository implements PeriodRepository {
-  DriftPeriodRepository(this.database);
+  DriftPeriodRepository(this.database, {this.userId});
 
   final AppDatabase database;
+  final String? userId;
 
   @override
   Stream<List<PeriodRecord>> watchActivePeriods() =>
       (database.select(database.periodEntries)
             ..where((table) => table.deletedAt.isNull())
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!))
             ..orderBy([(table) => OrderingTerm.asc(table.startDate)]))
           .watch()
           .map((rows) => rows.map(_fromRow).toList());
@@ -40,6 +44,9 @@ class DriftPeriodRepository implements PeriodRepository {
   Future<List<PeriodRecord>> getActivePeriods() async =>
       (database.select(database.periodEntries)
             ..where((table) => table.deletedAt.isNull())
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!))
             ..orderBy([(table) => OrderingTerm.asc(table.startDate)]))
           .get()
           .then((rows) => rows.map(_fromRow).toList());
@@ -48,6 +55,9 @@ class DriftPeriodRepository implements PeriodRepository {
   Future<List<PeriodRecord>> getDeletedPeriods() async =>
       (database.select(database.periodEntries)
             ..where((table) => table.deletedAt.isNotNull())
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!))
             ..orderBy([(table) => OrderingTerm.desc(table.startDate)]))
           .get()
           .then((rows) => rows.map(_fromRow).toList());
@@ -55,7 +65,10 @@ class DriftPeriodRepository implements PeriodRepository {
   @override
   Future<PeriodRecord?> getPeriodById(String id) async {
     final row = await (database.select(database.periodEntries)
-          ..where((table) => table.id.equals(id)))
+          ..where((table) => table.id.equals(id))
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
         .getSingleOrNull();
     return row == null ? null : _fromRow(row);
   }
@@ -84,7 +97,10 @@ class DriftPeriodRepository implements PeriodRepository {
     final existing = await (database.select(database.periodEntries)
           ..where(
               (table) => table.startDate.equals(DateOnly.format(normalized)))
-          ..where((table) => table.deletedAt.isNull()))
+          ..where((table) => table.deletedAt.isNull())
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
         .getSingleOrNull();
     if (existing != null) {
       throw const ValidationFailure('Tanggal mulai tersebut sudah tercatat.');
@@ -102,6 +118,7 @@ class DriftPeriodRepository implements PeriodRepository {
       await database.into(database.periodEntries).insert(
             PeriodEntriesCompanion.insert(
               id: id,
+              userId: Value(userId),
               startDate: DateOnly.format(normalized),
               cycleLengthDays: Value(cycleLength),
               notes: Value(_cleanNotes(notes)),
@@ -128,7 +145,10 @@ class DriftPeriodRepository implements PeriodRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-            ..where((table) => table.id.equals(id)))
+          ..where((table) => table.id.equals(id))
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           endDate: Value(DateOnly.format(normalized)),
@@ -157,7 +177,10 @@ class DriftPeriodRepository implements PeriodRepository {
           ..where((table) =>
               table.startDate.equals(DateOnly.format(normalizedStart)))
           ..where((table) => table.id.isNotIn([record.id]))
-          ..where((table) => table.deletedAt.isNull()))
+          ..where((table) => table.deletedAt.isNull())
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
         .getSingleOrNull();
     if (duplicate != null) {
       throw const ValidationFailure('Tanggal mulai tersebut sudah tercatat.');
@@ -176,7 +199,10 @@ class DriftPeriodRepository implements PeriodRepository {
         : DateOnly.differenceInDays(normalizedStart, previous.startDate);
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-            ..where((table) => table.id.equals(record.id)))
+          ..where((table) => table.id.equals(record.id))
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           startDate: Value(DateOnly.format(normalizedStart)),
@@ -198,7 +224,10 @@ class DriftPeriodRepository implements PeriodRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-            ..where((table) => table.id.equals(id)))
+          ..where((table) => table.id.equals(id))
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           deletedAt: Value(now),
@@ -220,7 +249,10 @@ class DriftPeriodRepository implements PeriodRepository {
           ..where((table) =>
               table.startDate.equals(DateOnly.format(record.startDate)))
           ..where((table) => table.id.isNotIn([id]))
-          ..where((table) => table.deletedAt.isNull()))
+          ..where((table) => table.deletedAt.isNull())
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
         .getSingleOrNull();
     if (duplicate != null) {
       throw const ValidationFailure('Tanggal mulai tersebut sudah tercatat.');
@@ -228,7 +260,10 @@ class DriftPeriodRepository implements PeriodRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-            ..where((table) => table.id.equals(id)))
+          ..where((table) => table.id.equals(id))
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
           .write(
         const PeriodEntriesCompanion(
           deletedAt: Value(null),
@@ -243,9 +278,17 @@ class DriftPeriodRepository implements PeriodRepository {
       String entityId, SyncOperation operation, String now) async {
     final record = await getPeriodById(entityId);
     final payload = record == null ? '{}' : jsonEncode(_toJson(record));
+    await (database.delete(database.syncQueue)
+          ..where((table) => userId == null
+              ? table.userId.isNull()
+              : table.userId.equals(userId!))
+          ..where((table) => table.entityType.equals('period_entry'))
+          ..where((table) => table.entityId.equals(entityId)))
+        .go();
     await database.into(database.syncQueue).insert(
           SyncQueueCompanion.insert(
             id: const Uuid().v4(),
+            userId: Value(userId),
             entityType: 'period_entry',
             entityId: entityId,
             operation: operation.name,
@@ -280,12 +323,28 @@ class DriftPeriodRepository implements PeriodRepository {
 
   Map<String, Object?> _toJson(PeriodRecord record) => {
         'id': record.id,
-        'startDate': DateOnly.format(record.startDate),
-        'endDate':
+        'user_id': userId,
+        'start_date': DateOnly.format(record.startDate),
+        'end_date':
             record.endDate == null ? null : DateOnly.format(record.endDate!),
+        'cycle_length_days': record.cycleLengthDays,
+        'period_duration_days': record.periodDurationDays,
+        'predicted_start_at_entry': record.predictedStartAtEntry == null
+            ? null
+            : DateOnly.format(record.predictedStartAtEntry!),
+        'window_start_at_entry': record.windowStartAtEntry == null
+            ? null
+            : DateOnly.format(record.windowStartAtEntry!),
+        'window_end_at_entry': record.windowEndAtEntry == null
+            ? null
+            : DateOnly.format(record.windowEndAtEntry!),
+        'variance_days': record.varianceDays,
+        'classification': record.classification?.value,
         'notes': record.notes,
-        'createdAt': record.createdAt.toUtc().toIso8601String(),
-        'updatedAt': record.updatedAt.toUtc().toIso8601String(),
+        'created_at': record.createdAt.toUtc().toIso8601String(),
+        'updated_at': record.updatedAt.toUtc().toIso8601String(),
+        'deleted_at': record.deletedAt?.toUtc().toIso8601String(),
+        'version': 1,
       };
 
   String? _cleanNotes(String? notes) {

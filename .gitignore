@@ -50,9 +50,9 @@ macos/Pods/
 # Existing project-local metadata
 /AGENTS.md
 /TASK.md
+/TASK2.md
 /graphify-out/
 /supabase.md
-/test/
 /.codex
 /.env
 

@@ -13,15 +13,19 @@ class PeriodRecalculationService {
     this.database,
     this.predictionService,
     this.classificationService,
-  );
+    {this.userId});
 
   final AppDatabase database;
   final PredictionService predictionService;
   final ClassificationService classificationService;
+  final String? userId;
 
   Future<CyclePrediction> recalculate() async {
     final rows = await (database.select(database.periodEntries)
           ..where((table) => table.deletedAt.isNull())
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!))
           ..orderBy([(table) => OrderingTerm.asc(table.startDate)]))
         .get();
     final starts = rows.map((row) => DateOnly.parse(row.startDate)).toList();
@@ -76,11 +80,16 @@ class PeriodRecalculationService {
       }
     });
     final next = predictionService.predict(starts);
-    await database.delete(database.predictions).go();
+    await (database.delete(database.predictions)
+          ..where((table) => userId == null
+              ? const Constant(true)
+              : table.userId.equals(userId!)))
+        .go();
     if (next.ready) {
       await database.into(database.predictions).insert(
             PredictionsCompanion.insert(
               id: const Uuid().v4(),
+              userId: Value(userId),
               generatedAt: DateTime.now().toUtc().toIso8601String(),
               predictedStart: DateOnly.format(next.predictedStart!),
               windowStart: DateOnly.format(next.windowStart!),

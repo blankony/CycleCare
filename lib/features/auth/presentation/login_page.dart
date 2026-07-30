@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/providers.dart';
@@ -36,21 +37,15 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   Widget build(BuildContext context) {
     ref.watch(authenticationStateProvider);
     final repository = ref.watch(authRepositoryProvider);
-    final user = repository?.currentUser;
+    final user = repository.currentUser;
     return Scaffold(
       appBar: AppBar(title: const Text('Akun cloud')),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(20),
-          child: repository == null
-              ? const Center(
-                  child: Text(
-                    'Cloud backup belum tersedia. Konfigurasi Supabase melalui dart-define terlebih dahulu.',
-                  ),
-                )
-              : user == null
-                  ? _buildAuthForm(context)
-                  : _buildSignedIn(context, repository, user.email),
+          child: user == null
+              ? _buildAuthForm(context)
+              : _buildSignedIn(context, repository, user.email),
         ),
       ),
     );
@@ -212,7 +207,6 @@ class _LoginPageState extends ConsumerState<LoginPage> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
     final repository = ref.read(authRepositoryProvider);
-    if (repository == null) return;
     setState(() {
       _isLoading = true;
       _message = null;
@@ -223,7 +217,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           email: _email.text.trim(),
           password: _password.text,
         );
-        if (mounted) Navigator.of(context).pop();
+        if (mounted) context.go('/dashboard');
         return;
       }
 
@@ -233,7 +227,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       );
       if (!mounted) return;
       if (result == AuthRegistrationResult.signedIn) {
-        Navigator.of(context).pop();
+        context.go('/dashboard');
         return;
       }
       setState(() {

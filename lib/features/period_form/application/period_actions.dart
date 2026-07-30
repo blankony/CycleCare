@@ -23,6 +23,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await repository.createPeriod(startDate: startDate, notes: notes);
       await _recalculateAndNotify(reminderStartDate: startDate);
       _invalidateData();
+      await _syncBestEffort();
     });
   }
 
@@ -41,6 +42,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await repository.updatePeriodEnd(id: id, endDate: endDate);
       await _recalculateAndNotify();
       _invalidateData();
+      await _syncBestEffort();
     });
   }
 
@@ -50,6 +52,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await repository.updatePeriod(record: record);
       await _recalculateAndNotify();
       _invalidateData();
+      await _syncBestEffort();
     });
   }
 
@@ -59,6 +62,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await repository.softDeletePeriod(id);
       await _recalculateAndNotify();
       _invalidateData();
+      await _syncBestEffort();
     });
   }
 
@@ -68,6 +72,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await repository.restorePeriod(id);
       await _recalculateAndNotify();
       _invalidateData();
+      await _syncBestEffort();
     });
   }
 
@@ -89,5 +94,11 @@ class PeriodActionsController extends AsyncNotifier<void> {
     ref.invalidate(activePeriodsProvider);
     ref.invalidate(predictionProvider);
     ref.invalidate(deletedPeriodsProvider);
+  }
+
+  Future<void> _syncBestEffort() async {
+    try {
+      await ref.read(syncControllerProvider).synchronizeNow();
+    } catch (_) {}
   }
 }
