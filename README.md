@@ -52,21 +52,21 @@ No configuration is required. Local period tracking, prediction, history, calend
 
 ### Run with Supabase
 
-Use compile-time defines only:
+Create a local `.env` file from `.env.example` and fill in the Supabase project URL and publishable/anon key:
 
 ```bash
-flutter run \
-  --dart-define=SUPABASE_URL=YOUR_URL \
-  --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+copy .env.example .env
+flutter run
 ```
 
-Windows CMD:
+PowerShell:
 
-```bat
-flutter run --dart-define=SUPABASE_URL=YOUR_URL --dart-define=SUPABASE_ANON_KEY=YOUR_ANON_KEY
+```powershell
+Copy-Item .env.example .env
+flutter run
 ```
 
-`SUPABASE_ANON_KEY` is the client publishable/anon key. Never use a `service_role` key in Flutter and never commit real values. `.env.example` is documentation only; it is not loaded at runtime.
+`SUPABASE_ANON_KEY` is the client publishable/anon key. Never use a `service_role` key in Flutter and never commit `.env` or real values. The app loads `.env` at startup.
 
 ## Local-first behavior
 
@@ -109,8 +109,8 @@ Biometric lock is not enabled automatically. The service checks device support, 
 1. Create a Supabase project.
 2. Open the SQL editor and apply `supabase/migrations/001_initial_schema.sql`.
 3. Keep Row Level Security enabled.
-4. Create the single user manually in Supabase Dashboard; the app does not expose public signup.
-5. Run with `SUPABASE_URL` and `SUPABASE_ANON_KEY` dart-defines.
+4. Copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+5. Run the app normally with `flutter run`.
 6. Log in from Pengaturan > Cloud backup.
 
 Every cloud-owned row uses `auth.uid() = user_id`; profiles use `auth.uid() = id`. Supabase credentials, tokens, and service-role keys are never included in local JSON backup.
