@@ -16,6 +16,8 @@ class SettingsPage extends ConsumerWidget {
     final settings =
         ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
     final client = ref.watch(supabaseClientProvider);
+    ref.watch(authenticationStateProvider);
+    final currentUser = ref.watch(authRepositoryProvider)?.currentUser;
     final reminderEnabled = settings['reminder_enabled'] == 'true';
     final biometricEnabled = settings['biometric_enabled'] == 'true';
     return Scaffold(
@@ -49,7 +51,9 @@ class SettingsPage extends ConsumerWidget {
                 title: const Text('Cloud backup'),
                 subtitle: Text(client == null
                     ? 'Tidak tersedia tanpa konfigurasi Supabase'
-                    : 'Supabase tersedia'),
+                    : currentUser == null
+                        ? 'Masuk atau daftar untuk mengaktifkan backup'
+                        : 'Masuk sebagai ${currentUser.email ?? 'akun Supabase'}'),
                 trailing: client == null
                     ? const Chip(label: Text('Segera hadir'))
                     : const Icon(Icons.chevron_right),
@@ -59,7 +63,7 @@ class SettingsPage extends ConsumerWidget {
                 leading: const Icon(Icons.sync),
                 title: const Text('Sinkronisasi manual'),
                 subtitle: Text(client == null
-                    ? 'Tidak tersedia tanpa konfigurasi Supabase'
+                    ? 'Konfigurasi Supabase diperlukan'
                     : 'Ketuk untuk mencoba sinkronisasi'),
                 trailing: client == null
                     ? const Chip(label: Text('Segera hadir'))
