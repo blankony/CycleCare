@@ -107,6 +107,7 @@ class DriftPeriodRepository implements PeriodRepository {
     }
     final now = DateTime.now().toUtc().toIso8601String();
     final active = await getActivePeriods();
+    _ensureNoOverlap(active, startDate: normalized);
     final previous = active
         .where((record) => record.startDate.isBefore(normalized))
         .lastOrNull;
@@ -142,13 +143,23 @@ class DriftPeriodRepository implements PeriodRepository {
       throw const ValidationFailure(
           'Tanggal selesai tidak boleh sebelum tanggal mulai.');
     }
+    if (normalized.isAfter(DateOnly.normalize(DateTime.now()))) {
+      throw const ValidationFailure(
+          'Tanggal selesai tidak boleh di masa depan.');
+    }
+    _ensureNoOverlap(
+      await getActivePeriods(),
+      recordId: id,
+      startDate: record.startDate,
+      endDate: normalized,
+    );
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-          ..where((table) => table.id.equals(id))
-          ..where((table) => userId == null
-              ? const Constant(true)
-              : table.userId.equals(userId!)))
+            ..where((table) => table.id.equals(id))
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           endDate: Value(DateOnly.format(normalized)),
@@ -173,6 +184,11 @@ class DriftPeriodRepository implements PeriodRepository {
       throw const ValidationFailure(
           'Tanggal selesai tidak boleh sebelum tanggal mulai.');
     }
+    if (record.endDate != null &&
+        record.endDate!.isAfter(DateOnly.normalize(DateTime.now()))) {
+      throw const ValidationFailure(
+          'Tanggal selesai tidak boleh di masa depan.');
+    }
     final duplicate = await (database.select(database.periodEntries)
           ..where((table) =>
               table.startDate.equals(DateOnly.format(normalizedStart)))
@@ -190,6 +206,12 @@ class DriftPeriodRepository implements PeriodRepository {
         ? null
         : DateOnly.differenceInDays(record.endDate!, normalizedStart) + 1;
     final active = await getActivePeriods();
+    _ensureNoOverlap(
+      active,
+      recordId: record.id,
+      startDate: normalizedStart,
+      endDate: record.endDate,
+    );
     final previous = active
         .where((item) =>
             item.id != record.id && item.startDate.isBefore(normalizedStart))
@@ -199,10 +221,10 @@ class DriftPeriodRepository implements PeriodRepository {
         : DateOnly.differenceInDays(normalizedStart, previous.startDate);
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-          ..where((table) => table.id.equals(record.id))
-          ..where((table) => userId == null
-              ? const Constant(true)
-              : table.userId.equals(userId!)))
+            ..where((table) => table.id.equals(record.id))
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           startDate: Value(DateOnly.format(normalizedStart)),
@@ -224,10 +246,10 @@ class DriftPeriodRepository implements PeriodRepository {
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-          ..where((table) => table.id.equals(id))
-          ..where((table) => userId == null
-              ? const Constant(true)
-              : table.userId.equals(userId!)))
+            ..where((table) => table.id.equals(id))
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!)))
           .write(
         PeriodEntriesCompanion(
           deletedAt: Value(now),
@@ -257,13 +279,19 @@ class DriftPeriodRepository implements PeriodRepository {
     if (duplicate != null) {
       throw const ValidationFailure('Tanggal mulai tersebut sudah tercatat.');
     }
+    _ensureNoOverlap(
+      await getActivePeriods(),
+      recordId: id,
+      startDate: record.startDate,
+      endDate: record.endDate,
+    );
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
       await (database.update(database.periodEntries)
-          ..where((table) => table.id.equals(id))
-          ..where((table) => userId == null
-              ? const Constant(true)
-              : table.userId.equals(userId!)))
+            ..where((table) => table.id.equals(id))
+            ..where((table) => userId == null
+                ? const Constant(true)
+                : table.userId.equals(userId!)))
           .write(
         const PeriodEntriesCompanion(
           deletedAt: Value(null),
@@ -354,6 +382,25 @@ class DriftPeriodRepository implements PeriodRepository {
       throw const ValidationFailure('Catatan maksimal 500 karakter.');
     }
     return value;
+  }
+
+  void _ensureNoOverlap(
+    List<PeriodRecord> records, {
+    String? recordId,
+    required DateTime startDate,
+    DateTime? endDate,
+  }) {
+    final start = DateOnly.normalize(startDate);
+    final end = DateOnly.normalize(endDate ?? DateTime.now());
+    for (final record in records.where((item) => item.id != recordId)) {
+      final otherStart = DateOnly.normalize(record.startDate);
+      final otherEnd = DateOnly.normalize(record.endDate ?? DateTime.now());
+      final overlaps = !end.isBefore(otherStart) && !start.isAfter(otherEnd);
+      if (overlaps) {
+        throw const ValidationFailure(
+            'Rentang period tidak boleh tumpang tindih.');
+      }
+    }
   }
 
   DateTime? _parseDate(String? value) =>

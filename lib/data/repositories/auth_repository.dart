@@ -1,6 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 enum AuthRegistrationResult { signedIn, confirmationRequired }
+
 enum AuthRestoreStatus { noSession, authenticated, expired }
 
 abstract interface class AuthRepository {

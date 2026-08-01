@@ -7,6 +7,7 @@ import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../core/date/date_only.dart';
 import '../../../domain/entities/period_record.dart';
+import '../../../domain/entities/cycle_insights.dart';
 
 class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
@@ -23,16 +24,25 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
   Widget build(BuildContext context) {
     final records =
         ref.watch(activePeriodsProvider).valueOrNull ?? const <PeriodRecord>[];
-    final prediction = ref.watch(predictionProvider).valueOrNull;
-    final markers = _buildMarkers(records, prediction);
+    final projections = ref.watch(projectionsProvider);
+    final settings = ref.watch(userCycleSettingsProvider).valueOrNull;
+    final markers = _buildMarkers(
+      records,
+      projections,
+      showOvulation: settings?.showOvulationEstimate == true,
+      showFertile: settings?.showFertileWindow == true,
+    );
     final selected = _selectedDay ?? _focusedDay;
-    final selectedRecords = records
-        .where((record) =>
-            isSameDay(record.startDate, selected) ||
-            (record.endDate != null &&
-                !selected.isBefore(record.startDate) &&
-                !selected.isAfter(record.endDate!)))
-        .toList();
+    final selectedEvents =
+        markers[DateTime(selected.year, selected.month, selected.day)] ??
+            const [];
+    final selectedRecords = records.where((record) {
+      final inStart = isSameDay(record.startDate, selected);
+      final inRange = record.endDate != null &&
+          !selected.isBefore(record.startDate) &&
+          !selected.isAfter(record.endDate!);
+      return inStart || inRange;
+    }).toList();
     return Scaffold(
       appBar: const CycleCareAppBar(title: 'Kalender'),
       body: ListView(
@@ -65,36 +75,48 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
             ),
           ),
           const SizedBox(height: 12),
-          _Legend(),
+          const _Legend(),
           const SizedBox(height: 12),
           Card(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: selectedRecords.isEmpty
-                  ? Text(
-                      'Tidak ada catatan pada ${DateOnly.display(selected)}.')
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                          Text('Detail ${DateOnly.display(selected)}',
-                              style: Theme.of(context).textTheme.titleMedium),
-                          const SizedBox(height: 8),
-                          ...selectedRecords.map((record) => Text(
-                              'Period ${DateOnly.display(record.startDate)}')),
-                        ]),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Detail ${DateOnly.display(selected)}',
+                      style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8),
+                  if (selectedRecords.isEmpty && selectedEvents.isEmpty)
+                    const Text(
+                        'Tidak ada catatan atau perkiraan pada tanggal ini.')
+                  else ...[
+                    ...selectedRecords.map((record) => Text(
+                        '● Tercatat: period ${DateOnly.display(record.startDate)}')),
+                    ...selectedEvents.map((event) => Text('◌ $event')),
+                  ],
+                ],
+              ),
             ),
           ),
+          const SizedBox(height: 12),
+          const Text(
+              'Perkiraan jauh ke depan memiliki tingkat kepastian lebih rendah.'),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-          onPressed: () => context.push('/add-period'),
-          label: const Text('Catat'),
-          icon: const Icon(Icons.add)),
+        onPressed: () => context.push('/add-period'),
+        label: const Text('Catat'),
+        icon: const Icon(Icons.add),
+      ),
     );
   }
 
   Map<DateTime, List<String>> _buildMarkers(
-      List<PeriodRecord> records, dynamic prediction) {
+    List<PeriodRecord> records,
+    List<FutureCycleProjection> projections, {
+    required bool showOvulation,
+    required bool showFertile,
+  }) {
     final markers = <DateTime, List<String>>{};
     void add(DateTime date, String value) {
       final key = DateTime(date.year, date.month, date.day);
@@ -102,32 +124,69 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     }
 
     for (final record in records) {
-      var date = record.startDate;
       final end = record.endDate ?? record.startDate;
-      while (!date.isAfter(end)) {
-        add(date, 'period');
-        date = date.add(const Duration(days: 1));
+      for (var date = record.startDate;
+          !date.isAfter(end);
+          date = date.add(const Duration(days: 1))) {
+        add(date, 'Period tercatat');
       }
     }
-    if (prediction?.predictedStart != null) {
-      add(prediction.predictedStart, 'prediksi');
-      var date = prediction.windowStart;
-      while (!date.isAfter(prediction.windowEnd)) {
-        add(date, 'rentang');
+    for (final projection in projections) {
+      var date = projection.windowStart;
+      while (!date.isAfter(projection.windowEnd)) {
+        add(date, 'Rentang perkiraan ${projection.sequence}');
         date = date.add(const Duration(days: 1));
       }
+      add(projection.predictedStart, 'Pusat perkiraan ${projection.sequence}');
+      if (showOvulation) {
+        add(projection.predictedStart.subtract(const Duration(days: 14)),
+            'Perkiraan ovulasi ${projection.sequence}');
+      }
+      if (showFertile) {
+        final fertileStart =
+            projection.windowStart.subtract(const Duration(days: 14 + 5));
+        final fertileEnd =
+            projection.windowEnd.subtract(const Duration(days: 13));
+        for (date = fertileStart;
+            !date.isAfter(fertileEnd);
+            date = date.add(const Duration(days: 1))) {
+          add(date, 'Perkiraan masa subur ${projection.sequence}');
+        }
+      }
     }
+    final today = DateTime.now();
+    add(today, 'Hari ini');
     return markers;
   }
 }
 
 class _Legend extends StatelessWidget {
+  const _Legend();
+
   @override
-  Widget build(BuildContext context) =>
-      Wrap(spacing: 16, runSpacing: 8, children: const [
-        Chip(
-            avatar: Icon(Icons.circle, size: 12),
-            label: Text('Period tercatat')),
-        Chip(avatar: Icon(Icons.star, size: 14), label: Text('Perkiraan')),
-      ]);
+  Widget build(BuildContext context) => Card(
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Wrap(
+            spacing: 12,
+            runSpacing: 8,
+            children: const [
+              Chip(
+                  avatar: Icon(Icons.circle, size: 12),
+                  label: Text('Tercatat')),
+              Chip(
+                  avatar: Icon(Icons.crop_square, size: 14),
+                  label: Text('Rentang perkiraan')),
+              Chip(
+                  avatar: Icon(Icons.star_border, size: 14),
+                  label: Text('Pusat perkiraan')),
+              Chip(
+                  avatar: Icon(Icons.blur_on, size: 14),
+                  label: Text('Ovulasi / masa subur')),
+              Chip(
+                  avatar: Icon(Icons.today, size: 14), label: Text('Hari ini')),
+            ],
+          ),
+        ),
+      );
 }

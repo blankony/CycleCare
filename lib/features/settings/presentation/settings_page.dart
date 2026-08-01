@@ -22,6 +22,7 @@ class SettingsPage extends ConsumerWidget {
     final syncSnapshot = sync.snapshot;
     final reminderEnabled = settings['reminder_enabled'] == 'true';
     final biometricEnabled = settings['biometric_enabled'] == 'true';
+    final cycleSettings = ref.watch(userCycleSettingsProvider).valueOrNull;
     return Scaffold(
       appBar: const CycleCareAppBar(title: 'Pengaturan'),
       body: ListView(
@@ -29,6 +30,22 @@ class SettingsPage extends ConsumerWidget {
         children: [
           Card(
             child: Column(children: [
+              SwitchListTile(
+                title: const Text('Tampilkan perkiraan ovulasi'),
+                subtitle: const Text(
+                    'Perkiraan transparan dari tanggal period berikutnya, bukan pengukuran medis.'),
+                value: cycleSettings?.showOvulationEstimate ?? false,
+                onChanged: (value) => _setFertilityVisibility(context, ref,
+                    value, cycleSettings?.showFertileWindow ?? false),
+              ),
+              SwitchListTile(
+                title: const Text('Tampilkan perkiraan masa subur'),
+                subtitle: const Text(
+                    'Perkiraan masa subur tidak boleh digunakan sebagai metode kontrasepsi.'),
+                value: cycleSettings?.showFertileWindow ?? false,
+                onChanged: (value) => _setFertilityVisibility(context, ref,
+                    cycleSettings?.showOvulationEstimate ?? false, value),
+              ),
               SwitchListTile(
                 title: const Text('Pengingat'),
                 subtitle: const Text(
@@ -71,8 +88,8 @@ class SettingsPage extends ConsumerWidget {
                 title: const Text('Sinkronisasi terakhir'),
                 subtitle: Text(syncSnapshot.lastSuccessfulSyncAt == null
                     ? 'Belum pernah berhasil'
-                    : DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(
-                        syncSnapshot.lastSuccessfulSyncAt!.toLocal())),
+                    : DateFormat('d MMM yyyy, HH:mm', 'id_ID')
+                        .format(syncSnapshot.lastSuccessfulSyncAt!.toLocal())),
               ),
               ListTile(
                 leading: const Icon(Icons.delete_sweep_outlined),
@@ -160,6 +177,26 @@ class SettingsPage extends ConsumerWidget {
       }
     }
     await _setSetting(ref, 'reminder_enabled', '$enabled');
+    await ref.read(userCycleSettingsRepositoryProvider).updateReminder(enabled);
+    ref.invalidate(userCycleSettingsProvider);
+  }
+
+  Future<void> _setFertilityVisibility(
+      BuildContext context, WidgetRef ref, bool ovulation, bool fertile) async {
+    try {
+      await ref
+          .read(userCycleSettingsRepositoryProvider)
+          .updateFertilityVisibility(
+            showOvulationEstimate: ovulation,
+            showFertileWindow: fertile,
+          );
+      ref.invalidate(userCycleSettingsProvider);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Pengaturan gagal disimpan: $error')));
+      }
+    }
   }
 
   Future<void> _setBiometric(
@@ -218,6 +255,24 @@ class SettingsPage extends ConsumerWidget {
       ),
     );
     if (confirmed != true) return;
+    if (!context.mounted) return;
+    final finalConfirmation = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Konfirmasi penghapusan permanen'),
+        content: const Text(
+            'Data cloud dan akun autentikasi tidak dapat dipulihkan setelah langkah ini.'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Batal')),
+          FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Hapus permanen')),
+        ],
+      ),
+    );
+    if (finalConfirmation != true) return;
     try {
       await ref.read(accountDeletionServiceProvider).deleteAccount();
       if (context.mounted) context.go('/login');
@@ -290,15 +345,24 @@ class SettingsPage extends ConsumerWidget {
       await ref
           .read(backupServiceProvider)
           .importFromPicker(replaceExisting: true);
+      await ref.read(recalculationServiceProvider).recalculate();
+      await ref.read(syncControllerProvider).synchronizeNow();
       ref.invalidate(activePeriodsProvider);
       ref.invalidate(predictionProvider);
       ref.invalidate(settingsProvider);
+      ref.invalidate(userCycleSettingsProvider);
+      ref.invalidate(flowLogsProvider);
+      ref.invalidate(cycleStatisticsProvider);
+      ref.invalidate(cycleInsightsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Backup berhasil diimpor.')));
       }
-    } catch (_) {
-      if (context.mounted) _comingSoon(context);
+    } catch (error) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text('Import gagal: $error')));
+      }
     }
   }
 
@@ -308,7 +372,7 @@ class SettingsPage extends ConsumerWidget {
       builder: (context) => AlertDialog(
         title: const Text('Hapus semua data lokal?'),
         content: const Text(
-            'Semua period, prediksi, pengaturan, dan antrean sinkronisasi akan dihapus dari perangkat. Akun Supabase tidak ikut dihapus.'),
+            'Semua period, prediksi, pengaturan, dan antrean sinkronisasi akan dihapus dari perangkat. Data cloud dapat tersinkron kembali setelah sinkronisasi awal berikutnya. Akun Supabase tidak ikut dihapus.'),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -338,6 +402,7 @@ class SettingsPage extends ConsumerWidget {
     if (second == true) {
       await ref.read(notificationServiceProvider).cancelAll();
       await ref.read(databaseProvider).deleteAllLocalData();
+      await ref.read(syncControllerProvider).resetAfterLocalDataDeletion();
       ref.invalidate(activePeriodsProvider);
       ref.invalidate(predictionProvider);
       ref.invalidate(settingsProvider);
@@ -350,5 +415,5 @@ class SettingsPage extends ConsumerWidget {
 
   void _comingSoon(BuildContext context) =>
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Fitur ini akan tersedia pada tahap berikutnya.')));
+          content: Text('Tindakan belum dapat dilakukan pada perangkat ini.')));
 }

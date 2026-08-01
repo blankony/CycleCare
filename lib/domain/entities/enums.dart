@@ -44,3 +44,54 @@ extension PredictionConfidenceText on PredictionConfidence {
 }
 
 enum SyncOperation { upsert, delete }
+
+enum MenstrualFlow { spotting, light, medium, heavy }
+
+extension MenstrualFlowText on MenstrualFlow {
+  String get value => name.toUpperCase();
+
+  String get label => switch (this) {
+        MenstrualFlow.spotting => 'Bercak',
+        MenstrualFlow.light => 'Ringan',
+        MenstrualFlow.medium => 'Sedang',
+        MenstrualFlow.heavy => 'Deras',
+      };
+
+  String get indicator => switch (this) {
+        MenstrualFlow.spotting => 'B',
+        MenstrualFlow.light => 'R',
+        MenstrualFlow.medium => 'S',
+        MenstrualFlow.heavy => 'D',
+      };
+
+  static MenstrualFlow? fromValue(String? value) {
+    if (value == null) return null;
+    for (final flow in MenstrualFlow.values) {
+      if (flow.value == value) return flow;
+    }
+    return null;
+  }
+}
+
+enum CyclePattern { insufficientData, consistent, variable, highlyVariable }
+
+extension CyclePatternText on CyclePattern {
+  String get label => switch (this) {
+        CyclePattern.insufficientData => 'Data belum cukup',
+        CyclePattern.consistent => 'Cukup konsisten',
+        CyclePattern.variable => 'Bervariasi',
+        CyclePattern.highlyVariable => 'Sangat bervariasi',
+      };
+}
+
+enum ReferenceComparison { insufficientData, withinRange, outsideRange }
+
+extension ReferenceComparisonText on ReferenceComparison {
+  String get label => switch (this) {
+        ReferenceComparison.insufficientData => 'Data belum cukup',
+        ReferenceComparison.withinRange => 'Dalam rentang referensi umum',
+        ReferenceComparison.outsideRange => 'Di luar rentang referensi umum',
+      };
+}
+
+enum ProjectionCertainty { active, reduced, low }

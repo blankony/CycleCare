@@ -85,6 +85,17 @@ class SyncController extends ChangeNotifier {
     await _synchronize(userId, initial: false);
   }
 
+  Future<void> resetAfterLocalDataDeletion() async {
+    final userId = authSession.user?.id;
+    if (userId == null) return;
+    snapshot = const SyncGateSnapshot(
+      status: SyncGateStatus.initialRequired,
+      pendingCount: 0,
+    );
+    notifyListeners();
+    await initializeForUser(userId);
+  }
+
   Future<void> _synchronize(String userId, {required bool initial}) async {
     if (_busy) return;
     _busy = true;

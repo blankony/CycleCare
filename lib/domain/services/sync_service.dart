@@ -12,5 +12,5 @@ class SyncService {
 }
 
 SyncRepository createSyncRepository(
-    {required AppDatabase database, required SupabaseClient client}) =>
+        {required AppDatabase database, required SupabaseClient client}) =>
     SupabaseSyncRepository(database, client);

@@ -3,12 +3,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/providers.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../data/repositories/period_repository.dart';
+import '../../../data/repositories/period_day_log_repository.dart';
 import '../../../domain/entities/period_record.dart';
 import '../../../domain/services/notification_service.dart';
 import '../../../domain/services/period_recalculation_service.dart';
 
 class PeriodActionsController extends AsyncNotifier<void> {
   late final PeriodRepository repository = ref.read(periodRepositoryProvider);
+  late final PeriodDayLogRepository flowRepository =
+      ref.read(periodDayLogRepositoryProvider);
   late final PeriodRecalculationService recalculation =
       ref.read(recalculationServiceProvider);
   late final NotificationService notifications =
@@ -76,6 +79,45 @@ class PeriodActionsController extends AsyncNotifier<void> {
     });
   }
 
+  Future<void> saveFlow({
+    required String periodEntryId,
+    required DateTime logDate,
+    required String flow,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await flowRepository.save(
+        periodEntryId: periodEntryId,
+        logDate: logDate,
+        flow: flow,
+      );
+      _invalidateData();
+      await _syncBestEffort();
+    });
+  }
+
+  Future<void> clearFlow(String id) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      await flowRepository.softDelete(id);
+      _invalidateData();
+      await _syncBestEffort();
+    });
+  }
+
+  Future<void> clearFlowsOutsideRange({
+    required String periodEntryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+  }) async {
+    await flowRepository.softDeleteOutsideRange(
+      periodEntryId: periodEntryId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+    _invalidateData();
+  }
+
   Future<void> _recalculateAndNotify({DateTime? reminderStartDate}) async {
     final prediction = await recalculation.recalculate();
     await notifications.cancelAll();
@@ -94,6 +136,10 @@ class PeriodActionsController extends AsyncNotifier<void> {
     ref.invalidate(activePeriodsProvider);
     ref.invalidate(predictionProvider);
     ref.invalidate(deletedPeriodsProvider);
+    ref.invalidate(flowLogsProvider);
+    ref.invalidate(cycleStatisticsProvider);
+    ref.invalidate(cycleInsightsProvider);
+    ref.invalidate(endOfCycleSummaryProvider);
   }
 
   Future<void> _syncBestEffort() async {

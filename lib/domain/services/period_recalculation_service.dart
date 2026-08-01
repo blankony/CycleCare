@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:uuid/uuid.dart';
 
@@ -10,10 +12,8 @@ import 'prediction_service.dart';
 
 class PeriodRecalculationService {
   PeriodRecalculationService(
-    this.database,
-    this.predictionService,
-    this.classificationService,
-    {this.userId});
+      this.database, this.predictionService, this.classificationService,
+      {this.userId});
 
   final AppDatabase database;
   final PredictionService predictionService;
@@ -73,10 +73,24 @@ class PeriodRecalculationService {
                 : DateOnly.format(before.windowEnd!)),
             varianceDays: Value(classification.signedVarianceDays),
             classification: Value(classification.classification.value),
+            predictionConfidenceAtEntry: row.predictionConfidenceAtEntry == null
+                ? Value(before.confidence?.value)
+                : Value(row.predictionConfidenceAtEntry),
+            predictionModelVersionAtEntry:
+                row.predictionModelVersionAtEntry == null
+                    ? Value(before.modelVersion)
+                    : Value(row.predictionModelVersionAtEntry),
+            predictionSampleSizeAtEntry: row.predictionSampleSizeAtEntry == null
+                ? Value(before.basedOnCycles)
+                : Value(row.predictionSampleSizeAtEntry),
+            predictionSnapshotAt: row.predictionSnapshotAt == null
+                ? Value(DateTime.now().toUtc().toIso8601String())
+                : Value(row.predictionSnapshotAt),
             updatedAt: Value(DateTime.now().toUtc().toIso8601String()),
             syncStatus: const Value('pending'),
           ),
         );
+        await _queueFreshPeriod(row.id);
       }
     });
     final next = predictionService.predict(starts);
@@ -103,5 +117,53 @@ class PeriodRecalculationService {
           );
     }
     return next;
+  }
+
+  Future<void> _queueFreshPeriod(String id) async {
+    final row = await (database.select(database.periodEntries)
+          ..where((table) => table.id.equals(id)))
+        .getSingle();
+    final now = DateTime.now().toUtc().toIso8601String();
+    final payload = jsonEncode({
+      'id': row.id,
+      'user_id': row.userId,
+      'start_date': row.startDate,
+      'end_date': row.endDate,
+      'cycle_length_days': row.cycleLengthDays,
+      'period_duration_days': row.periodDurationDays,
+      'predicted_start_at_entry': row.predictedStartAtEntry,
+      'window_start_at_entry': row.windowStartAtEntry,
+      'window_end_at_entry': row.windowEndAtEntry,
+      'variance_days': row.varianceDays,
+      'classification': row.classification,
+      'notes': row.notes,
+      'created_at': row.createdAt,
+      'updated_at': row.updatedAt,
+      'deleted_at': row.deletedAt,
+      'version': row.version,
+      'prediction_confidence_at_entry': row.predictionConfidenceAtEntry,
+      'prediction_model_version_at_entry': row.predictionModelVersionAtEntry,
+      'prediction_sample_size_at_entry': row.predictionSampleSizeAtEntry,
+      'prediction_snapshot_at': row.predictionSnapshotAt,
+    });
+    await (database.delete(database.syncQueue)
+          ..where((table) => table.entityType.equals('period_entry'))
+          ..where((table) => table.entityId.equals(id))
+          ..where((table) => userId == null
+              ? table.userId.isNull()
+              : table.userId.equals(userId!)))
+        .go();
+    await database.into(database.syncQueue).insert(
+          SyncQueueCompanion.insert(
+            id: const Uuid().v4(),
+            userId: Value(userId),
+            entityType: 'period_entry',
+            entityId: id,
+            operation: 'upsert',
+            payload: payload,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        );
   }
 }

@@ -23,10 +23,8 @@ abstract interface class SyncRepository {
 abstract interface class SyncRemoteDataSource {
   String? get currentUserId;
   Future<void> upsert(String table, Map<String, dynamic> payload);
-  Future<List<Map<String, dynamic>>> selectOwned(
-      String table, String userId);
-  Future<Map<String, dynamic>?> selectOwnedSingle(
-      String table, String userId);
+  Future<List<Map<String, dynamic>>> selectOwned(String table, String userId);
+  Future<Map<String, dynamic>?> selectOwnedSingle(String table, String userId);
 }
 
 class SupabaseSyncRemoteDataSource implements SyncRemoteDataSource {
@@ -137,7 +135,8 @@ class SupabaseSyncRepository implements SyncRepository {
             ..where((table) => table.id.equals(row['id'] as String))
             ..where((table) => table.userId.equals(userId)))
           .getSingleOrNull();
-      if (local != null && !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
+      if (local != null &&
+          !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
         continue;
       }
       await database.into(database.periodEntries).insertOnConflictUpdate(
@@ -185,7 +184,8 @@ class SupabaseSyncRepository implements SyncRepository {
             ..where((table) => table.id.equals(id))
             ..where((table) => table.userId.equals(userId)))
           .getSingleOrNull();
-      if (local != null && !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
+      if (local != null &&
+          !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
         continue;
       }
       await database.into(database.periodDayLogs).insertOnConflictUpdate(
@@ -207,16 +207,17 @@ class SupabaseSyncRepository implements SyncRepository {
   }
 
   Future<void> _pullSettings(String userId) async {
-    final row =
-        await remote.selectOwnedSingle('user_cycle_settings', userId);
-    if (row == null || await _hasPending(userId, 'user_cycle_settings', userId)) {
+    final row = await remote.selectOwnedSingle('user_cycle_settings', userId);
+    if (row == null ||
+        await _hasPending(userId, 'user_cycle_settings', userId)) {
       return;
     }
     final remoteUpdated = DateTime.parse(row['updated_at'] as String);
     final local = await (database.select(database.userCycleSettings)
           ..where((table) => table.userId.equals(userId)))
         .getSingleOrNull();
-    if (local != null && !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
+    if (local != null &&
+        !remoteUpdated.isAfter(DateTime.parse(local.updatedAt))) {
       return;
     }
     await database.into(database.userCycleSettings).insertOnConflictUpdate(
@@ -241,7 +242,8 @@ class SupabaseSyncRepository implements SyncRepository {
         );
   }
 
-  Future<bool> _hasPending(String userId, String entityType, String entityId) async {
+  Future<bool> _hasPending(
+      String userId, String entityType, String entityId) async {
     final item = await (database.select(database.syncQueue)
           ..where((table) => table.userId.equals(userId))
           ..where((table) => table.entityType.equals(entityType))
@@ -256,20 +258,20 @@ class SupabaseSyncRepository implements SyncRepository {
         await (database.update(database.periodEntries)
               ..where((table) => table.id.equals(item.entityId)))
             .write(const PeriodEntriesCompanion(
-              syncStatus: Value('synced'),
-            ));
+          syncStatus: Value('synced'),
+        ));
       case 'period_day_log':
         await (database.update(database.periodDayLogs)
               ..where((table) => table.id.equals(item.entityId)))
             .write(const PeriodDayLogsCompanion(
-              syncStatus: Value('synced'),
-            ));
+          syncStatus: Value('synced'),
+        ));
       case 'user_cycle_settings':
         await (database.update(database.userCycleSettings)
               ..where((table) => table.userId.equals(item.entityId)))
             .write(const UserCycleSettingsCompanion(
-              syncStatus: Value('synced'),
-            ));
+          syncStatus: Value('synced'),
+        ));
     }
   }
 

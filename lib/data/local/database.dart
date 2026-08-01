@@ -10,15 +10,14 @@ import 'tables.dart';
 
 part 'database.g.dart';
 
-@DriftDatabase(
-    tables: [
-      PeriodEntries,
-      Predictions,
-      PeriodDayLogs,
-      UserCycleSettings,
-      AppSettings,
-      SyncQueue,
-    ])
+@DriftDatabase(tables: [
+  PeriodEntries,
+  Predictions,
+  PeriodDayLogs,
+  UserCycleSettings,
+  AppSettings,
+  SyncQueue,
+])
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
@@ -66,7 +65,8 @@ class AppDatabase extends _$AppDatabase {
                 periodEntries, periodEntries.predictionModelVersionAtEntry);
             await m.addColumn(
                 periodEntries, periodEntries.predictionSampleSizeAtEntry);
-            await m.addColumn(periodEntries, periodEntries.predictionSnapshotAt);
+            await m.addColumn(
+                periodEntries, periodEntries.predictionSnapshotAt);
             await m.addColumn(predictions, predictions.userId);
             await m.addColumn(syncQueue, syncQueue.userId);
             await m.addColumn(syncQueue, syncQueue.version);
@@ -147,17 +147,18 @@ class AppDatabase extends _$AppDatabase {
           .go();
       await (delete(periodDayLogs)..where((table) => table.userId.isNull()))
           .go();
-      await (delete(predictions)..where((table) => table.userId.isNull()))
-          .go();
+      await (delete(predictions)..where((table) => table.userId.isNull())).go();
       await (delete(syncQueue)..where((table) => table.userId.isNull())).go();
     });
   }
 
   Future<void> deleteUserLocalData(String userId) async {
     await transaction(() async {
-      await (delete(periodDayLogs)..where((table) => table.userId.equals(userId)))
+      await (delete(periodDayLogs)
+            ..where((table) => table.userId.equals(userId)))
           .go();
-      await (delete(periodEntries)..where((table) => table.userId.equals(userId)))
+      await (delete(periodEntries)
+            ..where((table) => table.userId.equals(userId)))
           .go();
       await (delete(predictions)..where((table) => table.userId.equals(userId)))
           .go();

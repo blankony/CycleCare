@@ -6,35 +6,28 @@ import 'package:uuid/uuid.dart';
 import '../local/database.dart';
 import '../../core/date/date_only.dart';
 import '../../core/errors/app_failure.dart';
-
-class PeriodDayLogRecord {
-  const PeriodDayLogRecord({
-    required this.id,
-    required this.periodEntryId,
-    required this.logDate,
-    required this.flow,
-    required this.createdAt,
-    required this.updatedAt,
-    this.deletedAt,
-  });
-
-  final String id;
-  final String periodEntryId;
-  final DateTime logDate;
-  final String flow;
-  final DateTime createdAt;
-  final DateTime updatedAt;
-  final DateTime? deletedAt;
-}
+import '../../domain/entities/period_day_log.dart';
 
 abstract interface class PeriodDayLogRepository {
+  Stream<List<PeriodDayLogRecord>> watchAll();
+  Future<List<PeriodDayLogRecord>> getAll();
   Future<List<PeriodDayLogRecord>> getForPeriod(String periodEntryId);
+  Future<List<PeriodDayLogRecord>> getOutsideRange({
+    required String periodEntryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+  });
   Future<void> save({
     required String periodEntryId,
     required DateTime logDate,
     required String flow,
   });
   Future<void> softDelete(String id);
+  Future<void> softDeleteOutsideRange({
+    required String periodEntryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+  });
 }
 
 class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
@@ -42,6 +35,24 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
 
   final AppDatabase database;
   final String userId;
+
+  @override
+  Stream<List<PeriodDayLogRecord>> watchAll() =>
+      (database.select(database.periodDayLogs)
+            ..where((table) => table.userId.equals(userId))
+            ..where((table) => table.deletedAt.isNull())
+            ..orderBy([(table) => OrderingTerm.asc(table.logDate)]))
+          .watch()
+          .map((rows) => rows.map(_fromRow).toList());
+
+  @override
+  Future<List<PeriodDayLogRecord>> getAll() async =>
+      (database.select(database.periodDayLogs)
+            ..where((table) => table.userId.equals(userId))
+            ..where((table) => table.deletedAt.isNull())
+            ..orderBy([(table) => OrderingTerm.asc(table.logDate)]))
+          .get()
+          .then((rows) => rows.map(_fromRow).toList());
 
   @override
   Future<List<PeriodDayLogRecord>> getForPeriod(String periodEntryId) async {
@@ -64,7 +75,24 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
     if (!allowed.contains(flow)) {
       throw const ValidationFailure('Jenis flow tidak dikenal.');
     }
-    final normalized = DateOnly.format(logDate);
+    final period = await (database.select(database.periodEntries)
+          ..where((table) => table.id.equals(periodEntryId))
+          ..where((table) => table.userId.equals(userId))
+          ..where((table) => table.deletedAt.isNull()))
+        .getSingleOrNull();
+    if (period == null) {
+      throw const ValidationFailure('Catatan period tidak ditemukan.');
+    }
+    final normalizedDate = DateOnly.normalize(logDate);
+    final startDate = DateOnly.parse(period.startDate);
+    final endDate = period.endDate == null
+        ? DateOnly.normalize(DateTime.now())
+        : DateOnly.parse(period.endDate!);
+    if (normalizedDate.isBefore(startDate) || normalizedDate.isAfter(endDate)) {
+      throw const ValidationFailure(
+          'Tanggal flow harus berada dalam rentang period.');
+    }
+    final normalized = DateOnly.format(normalizedDate);
     final now = DateTime.now().toUtc().toIso8601String();
     final existing = await (database.select(database.periodDayLogs)
           ..where((table) => table.userId.equals(userId))
@@ -117,6 +145,36 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
   }
 
   @override
+  Future<List<PeriodDayLogRecord>> getOutsideRange({
+    required String periodEntryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+  }) async {
+    final logs = await getForPeriod(periodEntryId);
+    final start = DateOnly.normalize(startDate);
+    final end = DateOnly.normalize(endDate ?? DateTime.now());
+    return logs
+        .where((log) => log.logDate.isBefore(start) || log.logDate.isAfter(end))
+        .toList();
+  }
+
+  @override
+  Future<void> softDeleteOutsideRange({
+    required String periodEntryId,
+    required DateTime startDate,
+    required DateTime? endDate,
+  }) async {
+    final outside = await getOutsideRange(
+      periodEntryId: periodEntryId,
+      startDate: startDate,
+      endDate: endDate,
+    );
+    for (final log in outside) {
+      await softDelete(log.id);
+    }
+  }
+
+  @override
   Future<void> softDelete(String id) async {
     final now = DateTime.now().toUtc().toIso8601String();
     await database.transaction(() async {
@@ -155,6 +213,7 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
         flow: row.flow,
         createdAt: DateTime.parse(row.createdAt),
         updatedAt: DateTime.parse(row.updatedAt),
-        deletedAt: row.deletedAt == null ? null : DateTime.parse(row.deletedAt!),
+        deletedAt:
+            row.deletedAt == null ? null : DateTime.parse(row.deletedAt!),
       );
 }

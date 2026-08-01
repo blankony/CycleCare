@@ -9,6 +9,8 @@ import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/history/presentation/history_page.dart';
 import '../features/period_form/presentation/period_form_page.dart';
 import '../features/settings/presentation/settings_page.dart';
+import '../features/statistics/presentation/statistics_page.dart';
+import '../features/summary/presentation/summary_page.dart';
 import '../features/sync/presentation/sync_gate_page.dart';
 import '../app/auth_session_controller.dart';
 import '../domain/entities/sync_state.dart';
@@ -37,22 +39,30 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/add-period',
         builder: (context, state) => PeriodFormPage(record: state.extra),
       ),
+      GoRoute(
+        path: '/statistics',
+        builder: (_, __) => const StatisticsPage(),
+      ),
+      GoRoute(
+        path: '/summary/:periodId',
+        builder: (_, state) => SummaryPage(
+          periodId: state.pathParameters['periodId']!,
+        ),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
         branches: [
           StatefulShellBranch(routes: [
             GoRoute(
-                path: '/dashboard',
-                builder: (_, __) => const DashboardPage()),
+                path: '/dashboard', builder: (_, __) => const DashboardPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(
                 path: '/calendar', builder: (_, __) => const CalendarPage()),
           ]),
           StatefulShellBranch(routes: [
-            GoRoute(
-                path: '/history', builder: (_, __) => const HistoryPage()),
+            GoRoute(path: '/history', builder: (_, __) => const HistoryPage()),
           ]),
           StatefulShellBranch(routes: [
             GoRoute(

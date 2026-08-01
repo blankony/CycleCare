@@ -40,6 +40,36 @@ create index if not exists period_day_logs_period_date_idx
   on public.period_day_logs(period_entry_id, log_date);
 create index if not exists user_cycle_settings_updated_idx
   on public.user_cycle_settings(user_id, updated_at);
+
+create or replace function public.validate_cyclecare_day_log()
+returns trigger
+language plpgsql
+as $$
+declare
+  period public.period_entries%rowtype;
+begin
+  select * into period
+  from public.period_entries
+  where id = new.period_entry_id
+    and user_id = new.user_id
+    and deleted_at is null;
+  if not found then
+    raise exception 'period_entry_id tidak dimiliki oleh user';
+  end if;
+  if new.log_date < period.start_date
+     or (period.end_date is not null and new.log_date > period.end_date)
+     or new.log_date > current_date then
+    raise exception 'log_date berada di luar rentang period';
+  end if;
+  return new;
+end;
+$$;
+
+drop trigger if exists period_day_logs_valid_range on public.period_day_logs;
+create trigger period_day_logs_valid_range
+before insert or update on public.period_day_logs
+for each row execute function public.validate_cyclecare_day_log();
+
 create index if not exists period_entries_user_updated_idx
   on public.period_entries(user_id, updated_at);
 create index if not exists period_entries_user_start_idx

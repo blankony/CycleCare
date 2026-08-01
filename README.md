@@ -70,6 +70,16 @@ Jika `.env` tidak tersedia, nilainya kosong, atau inisialisasi Supabase gagal, a
 
 A local write is committed to Drift first, the UI updates immediately, and a stable UUID-backed sync queue item is created. Supabase is the canonical synchronized store, while Drift remains the responsive cache and temporary offline store after a successful authenticated setup. Pending local edits are pushed before remote rows can replace them, queue entries are deduplicated per entity, pulls are scoped by user ID, and soft deletion is preserved. Device clock differences remain a known limitation.
 
+## Cycle tracking features
+
+- Period records support ongoing periods, later end dates, editing, notes, soft deletion, restore, duplicate prevention, and overlap validation.
+- Daily flow is optional and recorded per date as Bercak, Ringan, Sedang, or Deras. Flow is descriptive only and does not estimate blood volume.
+- The dashboard derives current cycle day, menstruation day, next-period range, neutral late status, personal consistency, and cycle statistics from Drift.
+- Ovulation and fertile-window cards and calendar markers are hidden by default and can be enabled in Pengaturan. They are estimates only; fertile estimates must not be used as contraception.
+- Kalender shows recorded days separately from six derived future projections, prediction centers, uncertainty windows, and optional fertility markers. Distant projections use lower certainty.
+- Riwayat is newest-first and includes flow summaries, classifications, notes, statistics, and end-of-cycle summaries.
+- Statistics use up to the 12 newest valid records and compare measurements with general adult references of 24–38 cycle days and no more than 8 bleeding days. These comparisons are not diagnoses.
+
 ## Prediction algorithm
 
 Model version: `robust-weighted-v1`.
@@ -106,17 +116,18 @@ Biometric lock is not enabled automatically. The service checks device support, 
 
 1. Create a Supabase project.
 2. Open the SQL editor and apply `supabase/migrations/001_initial_schema.sql`.
-3. Keep Row Level Security enabled.
-4. Copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-5. Run the app normally with `flutter run`.
-6. Log in from the startup authentication screen and complete the initial sync gate.
-7. Deploy `supabase/functions/delete-account` when account deletion is required.
+3. Apply `supabase/migrations/002_cycle_tracking_features.sql`.
+4. Keep Row Level Security enabled.
+5. Copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
+6. Run the app normally with `flutter run`.
+7. Register or log in from the startup authentication screen and complete the initial sync gate.
+8. Deploy `supabase/functions/delete-account` and configure its service-role secret only in the Edge Function environment for account deletion.
 
 Every cloud-owned row uses `auth.uid() = user_id`; profiles use `auth.uid() = id`. Supabase credentials, tokens, and service-role keys are never included in local JSON backup.
 
 ## Backup and restore
 
-Export creates JSON containing `schemaVersion`, `exportedAt`, `periodEntries`, `predictions`, and `settings`, then uses the platform share sheet. Import validates schema version and required fields and currently uses an explicit replace flow inside a database transaction. JSON backups are unencrypted and contain sensitive health information; store them carefully. Encryption is a known limitation.
+Export creates schema version 2 JSON containing `schemaVersion`, `exportedAt`, period entries and prediction snapshots, daily flow logs, synchronized cycle settings, predictions, notes, and local settings, then uses the platform share sheet. Import accepts schema version 1 backups without flow/settings, normalizes date-only values, validates required fields, assigns imported ownership to the currently authenticated user, queues imported records, recalculates derived values, and uses an explicit replace flow inside a transaction. JSON backups are unencrypted and contain sensitive health information; store them carefully. Encryption is a known limitation.
 
 Delete-all-local-data requires two confirmations and clears local periods, daily logs, predictions, settings, and the sync queue. Account deletion uses the authenticated `delete-account` Edge Function, then clears the current user's local cache and reminders without exposing a service-role key to Flutter.
 
@@ -132,6 +143,7 @@ The tests cover:
 - Mandatory bootstrap configuration states and required provider graph.
 - Authenticated route redirects, initial-sync retry, temporary offline access, and expired sessions.
 - Drift version 1 to version 2 migration, user isolation, sync conflict handling, soft deletion, and daily-flow sync foundations.
+- Cycle day, late-status, fertility-estimate, future-projection, statistics, reference-comparison, summary, and backup compatibility tests.
 
 Run:
 
