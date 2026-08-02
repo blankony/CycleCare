@@ -32,7 +32,13 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
       showOvulation: settings?.showOvulationEstimate == true,
       showFertile: settings?.showFertileWindow == true,
     );
-    final selected = _selectedDay ?? _focusedDay;
+    final latestRecordDate = records.isEmpty ? null : records.last.startDate;
+    final selected = _selectedDay ??
+        (latestRecordDate != null &&
+                latestRecordDate.year == _focusedDay.year &&
+                latestRecordDate.month == _focusedDay.month
+            ? latestRecordDate
+            : _focusedDay);
     final selectedEvents =
         markers[DateTime(selected.year, selected.month, selected.day)] ??
             const [];

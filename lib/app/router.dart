@@ -14,7 +14,9 @@ import '../features/summary/presentation/summary_page.dart';
 import '../features/sync/presentation/sync_gate_page.dart';
 import '../app/auth_session_controller.dart';
 import '../domain/entities/sync_state.dart';
+import 'design/cycle_care_design.dart';
 import 'providers.dart';
+import 'widgets.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authSessionProvider);
@@ -101,7 +103,7 @@ String? resolveAppRedirect({
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
-  static const double largeScreenMinWidth = 600;
+  static const double largeScreenMinWidth = 840;
 
   final StatefulNavigationShell navigationShell;
 
@@ -110,29 +112,103 @@ class AppShell extends StatelessWidget {
         builder: (context, constraints) {
           if (constraints.maxWidth > largeScreenMinWidth) {
             return Scaffold(
-              body: Row(
-                children: [
-                  SafeArea(
-                    child: NavigationRail(
-                      selectedIndex: navigationShell.currentIndex,
-                      onDestinationSelected: navigationShell.goBranch,
-                      labelType: NavigationRailLabelType.all,
-                      destinations: _railDestinations,
-                    ),
+              backgroundColor: Colors.transparent,
+              body: CycleCareBackground(
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(CycleCareSpacing.sm),
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: Colors.white.withValues(alpha: 0.90),
+                            borderRadius: CycleCareRadius.cardBorder,
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x120F172A),
+                                blurRadius: 24,
+                                offset: Offset(0, 10),
+                              ),
+                            ],
+                          ),
+                          child: NavigationRail(
+                            selectedIndex: navigationShell.currentIndex,
+                            onDestinationSelected: navigationShell.goBranch,
+                            groupAlignment: -0.65,
+                            minWidth: 96,
+                            labelType: NavigationRailLabelType.all,
+                            leading: Padding(
+                              padding: const EdgeInsets.only(
+                                top: CycleCareSpacing.md,
+                                bottom: CycleCareSpacing.xl,
+                              ),
+                              child: Container(
+                                width: 48,
+                                height: 48,
+                                alignment: Alignment.center,
+                                decoration: const BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      CycleCareColors.period,
+                                      Color(0xFF8B5CF6),
+                                    ],
+                                  ),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Text(
+                                  'CC',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            destinations: _railDestinations,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: CycleCareSpacing.xs),
+                      Expanded(child: navigationShell),
+                    ],
                   ),
-                  const VerticalDivider(width: 1),
-                  Expanded(child: navigationShell),
-                ],
+                ),
               ),
             );
           }
 
           return Scaffold(
+            backgroundColor: Colors.transparent,
             body: navigationShell,
-            bottomNavigationBar: NavigationBar(
-              selectedIndex: navigationShell.currentIndex,
-              onDestinationSelected: navigationShell.goBranch,
-              destinations: _barDestinations,
+            bottomNavigationBar: SafeArea(
+              top: false,
+              minimum: const EdgeInsets.fromLTRB(
+                CycleCareSpacing.sm,
+                CycleCareSpacing.xs,
+                CycleCareSpacing.sm,
+                CycleCareSpacing.sm,
+              ),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.96),
+                  borderRadius: CycleCareRadius.cardBorder,
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x160F172A),
+                      blurRadius: 28,
+                      offset: Offset(0, 10),
+                    ),
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: CycleCareRadius.cardBorder,
+                  child: NavigationBar(
+                    selectedIndex: navigationShell.currentIndex,
+                    onDestinationSelected: navigationShell.goBranch,
+                    destinations: _barDestinations,
+                  ),
+                ),
+              ),
             ),
           );
         },
