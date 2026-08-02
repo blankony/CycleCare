@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'design/cycle_care_design.dart';
 
@@ -45,6 +46,14 @@ class CycleCareTheme {
         foregroundColor: CycleCareColors.textPrimary,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: textTheme.titleLarge,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Colors.transparent,
+          statusBarIconBrightness: Brightness.dark,
+          statusBarBrightness: Brightness.light,
+          systemNavigationBarColor: CycleCareColors.background,
+          systemNavigationBarDividerColor: Colors.transparent,
+          systemNavigationBarIconBrightness: Brightness.dark,
+        ),
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

@@ -178,7 +178,7 @@ class AppShell extends StatelessWidget {
           }
 
           return Scaffold(
-            backgroundColor: Colors.transparent,
+            backgroundColor: CycleCareColors.background,
             body: navigationShell,
             bottomNavigationBar: SafeArea(
               top: false,
