@@ -101,29 +101,81 @@ String? resolveAppRedirect({
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
+  static const double largeScreenMinWidth = 600;
+
   final StatefulNavigationShell navigationShell;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: navigationShell,
-        bottomNavigationBar: NavigationBar(
-          selectedIndex: navigationShell.currentIndex,
-          onDestinationSelected: navigationShell.goBranch,
-          destinations: const [
-            NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Beranda'),
-            NavigationDestination(
-                icon: Icon(Icons.calendar_month_outlined),
-                selectedIcon: Icon(Icons.calendar_month),
-                label: 'Kalender'),
-            NavigationDestination(icon: Icon(Icons.history), label: 'Riwayat'),
-            NavigationDestination(
-                icon: Icon(Icons.settings_outlined),
-                selectedIcon: Icon(Icons.settings),
-                label: 'Pengaturan'),
-          ],
-        ),
+  Widget build(BuildContext context) => LayoutBuilder(
+        builder: (context, constraints) {
+          if (constraints.maxWidth > largeScreenMinWidth) {
+            return Scaffold(
+              body: Row(
+                children: [
+                  SafeArea(
+                    child: NavigationRail(
+                      selectedIndex: navigationShell.currentIndex,
+                      onDestinationSelected: navigationShell.goBranch,
+                      labelType: NavigationRailLabelType.all,
+                      destinations: _railDestinations,
+                    ),
+                  ),
+                  const VerticalDivider(width: 1),
+                  Expanded(child: navigationShell),
+                ],
+              ),
+            );
+          }
+
+          return Scaffold(
+            body: navigationShell,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: navigationShell.currentIndex,
+              onDestinationSelected: navigationShell.goBranch,
+              destinations: _barDestinations,
+            ),
+          );
+        },
       );
+
+  static const _barDestinations = [
+    NavigationDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: 'Beranda',
+    ),
+    NavigationDestination(
+      icon: Icon(Icons.calendar_month_outlined),
+      selectedIcon: Icon(Icons.calendar_month),
+      label: 'Kalender',
+    ),
+    NavigationDestination(icon: Icon(Icons.history), label: 'Riwayat'),
+    NavigationDestination(
+      icon: Icon(Icons.settings_outlined),
+      selectedIcon: Icon(Icons.settings),
+      label: 'Pengaturan',
+    ),
+  ];
+
+  static const _railDestinations = [
+    NavigationRailDestination(
+      icon: Icon(Icons.home_outlined),
+      selectedIcon: Icon(Icons.home),
+      label: Text('Beranda'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.calendar_month_outlined),
+      selectedIcon: Icon(Icons.calendar_month),
+      label: Text('Kalender'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.history),
+      label: Text('Riwayat'),
+    ),
+    NavigationRailDestination(
+      icon: Icon(Icons.settings_outlined),
+      selectedIcon: Icon(Icons.settings),
+      label: Text('Pengaturan'),
+    ),
+  ];
 }
