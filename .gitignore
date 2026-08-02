@@ -54,6 +54,7 @@ macos/Pods/
 /test/
 /graphify-out/
 /supabase.md
+/supabase/.temp/
 /.codex
 /.env
 

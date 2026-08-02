@@ -114,14 +114,38 @@ Biometric lock is not enabled automatically. The service checks device support, 
 
 ## Supabase setup
 
-1. Create a Supabase project.
+1. Create a Supabase project and note its project reference ID from the dashboard URL.
 2. Open the SQL editor and apply `supabase/migrations/001_initial_schema.sql`.
 3. Apply `supabase/migrations/002_cycle_tracking_features.sql`.
 4. Keep Row Level Security enabled.
 5. Copy `.env.example` to `.env` and fill in `SUPABASE_URL` and `SUPABASE_ANON_KEY`.
-6. Run the app normally with `flutter run`.
-7. Register or log in from the startup authentication screen and complete the initial sync gate.
-8. Deploy `supabase/functions/delete-account` and configure its service-role secret only in the Edge Function environment for account deletion.
+6. Install or run the Supabase CLI through `npx supabase`.
+7. Create a Supabase Personal Access Token from the dashboard account Access Tokens page. Do not commit it or place it in the Flutter `.env` file.
+8. Authenticate the CLI from an interactive terminal:
+
+   ```powershell
+   npx supabase login
+   ```
+
+   Paste the Personal Access Token when prompted. The CLI can also be authenticated for a single session with the `SUPABASE_ACCESS_TOKEN` environment variable.
+
+9. Deploy the account-deletion Edge Function from the repository root. Keep JWT verification enabled; do not add `--no-verify-jwt`:
+
+   ```powershell
+   npx supabase functions deploy delete-account --project-ref <PROJECT_REF> --use-api
+   ```
+
+10. In Supabase Dashboard → Edge Functions → Secrets, configure `SUPABASE_SERVICE_ROLE_KEY` for the function. This key is server-only, must never be placed in Flutter, and must never be committed.
+11. Verify the deployment:
+
+   ```powershell
+   npx supabase functions list --project-ref <PROJECT_REF> --output pretty
+   ```
+
+   The `delete-account` function should be `ACTIVE` with JWT verification enabled.
+
+12. Run the app normally with `flutter run`, register or log in from the startup authentication screen, and complete the initial sync gate.
+13. Test account deletion with a disposable account from Settings. Confirm that the Auth user is removed, local health data and reminders are cleared, app security is disabled, and the session is signed out.
 
 Every cloud-owned row uses `auth.uid() = user_id`; profiles use `auth.uid() = id`. Supabase credentials, tokens, and service-role keys are never included in local JSON backup.
 
