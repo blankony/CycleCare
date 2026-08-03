@@ -30,6 +30,11 @@ class SyncGatePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final controller = ref.watch(syncControllerProvider);
     final snapshot = controller.snapshot;
+    if (snapshot.status == SyncGateStatus.synchronizing) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
     final migration = snapshot.status == SyncGateStatus.migrationRequired;
     final failure = snapshot.status == SyncGateStatus.failed;
     final title = migration
@@ -41,9 +46,7 @@ class SyncGatePage extends ConsumerWidget {
         ? 'Data lokal dari versi sebelumnya belum memiliki pemilik akun. Pilih tindakan sebelum data kesehatan dapat dibuka.'
         : failure
             ? 'Pastikan koneksi tersedia lalu coba lagi. Instalasi baru tidak dapat membuka tracker tanpa sinkronisasi awal.'
-            : snapshot.status == SyncGateStatus.synchronizing
-                ? 'Mengambil data cloud dan menyiapkan cache lokal.'
-                : 'Menyiapkan akses aman ke data CycleCare.';
+            : 'Menyiapkan akses aman ke data CycleCare.';
     return Scaffold(
       body: Center(
         child: Padding(
@@ -81,8 +84,6 @@ class SyncGatePage extends ConsumerWidget {
                     child: const Text('Hapus data lama dari perangkat'),
                   ),
                 ),
-              ] else if (snapshot.status == SyncGateStatus.synchronizing) ...[
-                const CircularProgressIndicator(),
               ] else ...[
                 FilledButton(
                   onPressed: () => ref.read(syncControllerProvider).retry(),

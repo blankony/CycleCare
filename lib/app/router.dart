@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../features/app_lock/presentation/lock_page.dart';
 import '../features/auth/presentation/login_page.dart';
+import '../features/auth/presentation/register_page.dart';
 import '../features/calendar/presentation/calendar_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/history/presentation/history_page.dart';
@@ -33,7 +34,14 @@ final routerProvider = Provider<GoRouter>((ref) {
     ),
     routes: [
       GoRoute(path: '/session', builder: (_, __) => const SessionPage()),
-      GoRoute(path: '/login', builder: (_, __) => const LoginPage()),
+      GoRoute(
+        path: '/login',
+        builder: (_, state) => LoginPage(
+          registrationComplete:
+              state.uri.queryParameters['registered'] == 'true',
+        ),
+      ),
+      GoRoute(path: '/register', builder: (_, __) => const RegisterPage()),
       GoRoute(path: '/sync', builder: (_, __) => const SyncGatePage()),
       GoRoute(path: '/local-data', builder: (_, __) => const SyncGatePage()),
       GoRoute(path: '/lock', builder: (_, __) => const LockPage()),
@@ -87,14 +95,17 @@ String? resolveAppRedirect({
   }
   final authenticated =
       authStatus == AuthSessionStatus.authenticated && hasUser;
-  if (!authenticated) return location == '/login' ? null : '/login';
+  if (!authenticated) {
+    return {'/login', '/register'}.contains(location) ? null : '/login';
+  }
   if (syncStatus == SyncGateStatus.migrationRequired) {
     return location == '/local-data' ? null : '/local-data';
   }
   final syncReady = syncStatus == SyncGateStatus.ready ||
       syncStatus == SyncGateStatus.offlineReady;
   if (!syncReady) return location == '/sync' ? null : '/sync';
-  if ({'/login', '/session', '/sync', '/local-data'}.contains(location)) {
+  if ({'/login', '/register', '/session', '/sync', '/local-data'}
+      .contains(location)) {
     return '/dashboard';
   }
   return null;

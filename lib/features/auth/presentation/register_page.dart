@@ -4,37 +4,28 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/providers.dart';
+import '../../../data/repositories/auth_repository.dart';
 
-class LoginPage extends ConsumerStatefulWidget {
-  const LoginPage({this.registrationComplete = false, super.key});
-
-  final bool registrationComplete;
+class RegisterPage extends ConsumerStatefulWidget {
+  const RegisterPage({super.key});
 
   @override
-  ConsumerState<LoginPage> createState() => _LoginPageState();
+  ConsumerState<RegisterPage> createState() => _RegisterPageState();
 }
 
-class _LoginPageState extends ConsumerState<LoginPage> {
+class _RegisterPageState extends ConsumerState<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _passwordConfirmation = TextEditingController();
   String? _message;
-  bool _messageIsError = false;
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    if (widget.registrationComplete) {
-      _message =
-          'Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu masuk.';
-    }
-  }
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _passwordConfirmation.dispose();
     super.dispose();
   }
 
@@ -48,13 +39,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               child: ListView(
                 children: [
                   Icon(
-                    Icons.login,
+                    Icons.person_add_outlined,
                     size: 56,
                     color: Theme.of(context).colorScheme.primary,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Masuk ke CycleCare',
+                    'Buat akun CycleCare',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
@@ -77,8 +68,8 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   TextFormField(
                     controller: _password,
                     obscureText: true,
-                    textInputAction: TextInputAction.done,
-                    autofillHints: const [AutofillHints.password],
+                    textInputAction: TextInputAction.next,
+                    autofillHints: const [AutofillHints.newPassword],
                     decoration: const InputDecoration(labelText: 'Password'),
                     validator: (value) {
                       if ((value ?? '').length < 6) {
@@ -86,6 +77,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       }
                       return null;
                     },
+                  ),
+                  const SizedBox(height: 12),
+                  TextFormField(
+                    controller: _passwordConfirmation,
+                    obscureText: true,
+                    textInputAction: TextInputAction.done,
+                    autofillHints: const [AutofillHints.newPassword],
+                    decoration:
+                        const InputDecoration(labelText: 'Ulangi password'),
+                    validator: (value) =>
+                        value != _password.text ? 'Password tidak sama.' : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 20),
@@ -96,13 +98,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             dimension: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Masuk'),
+                        : const Text('Daftar'),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
-                    onPressed:
-                        _isLoading ? null : () => context.push('/register'),
-                    child: const Text('Belum punya akun? Daftar'),
+                    onPressed: _isLoading ? null : () => context.go('/login'),
+                    child: const Text('Sudah punya akun? Masuk'),
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 12),
@@ -110,9 +111,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                       _message!,
                       textAlign: TextAlign.center,
                       style: TextStyle(
-                        color: _messageIsError
-                            ? Theme.of(context).colorScheme.error
-                            : Theme.of(context).colorScheme.primary,
+                        color: Theme.of(context).colorScheme.error,
                       ),
                     ),
                   ],
@@ -131,23 +130,22 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       _message = null;
     });
     try {
-      await ref.read(authRepositoryProvider).signIn(
+      final result = await ref.read(authRepositoryProvider).signUp(
             email: _email.text.trim(),
             password: _password.text,
           );
-      if (mounted) context.go('/dashboard');
-    } on AuthException catch (error) {
-      if (mounted) {
-        setState(() {
-          _message = error.message;
-          _messageIsError = true;
-        });
+      if (!mounted) return;
+      if (result == AuthRegistrationResult.signedIn) {
+        context.go('/dashboard');
+        return;
       }
+      context.go('/login?registered=true');
+    } on AuthException catch (error) {
+      if (mounted) setState(() => _message = error.message);
     } catch (_) {
       if (mounted) {
         setState(() {
           _message = 'Proses gagal. Periksa koneksi lalu coba lagi.';
-          _messageIsError = true;
         });
       }
     } finally {
