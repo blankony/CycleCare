@@ -7,12 +7,14 @@ import 'package:cycle_care/app/providers.dart';
 import 'package:cycle_care/app/theme.dart';
 import 'package:cycle_care/domain/entities/cycle_insights.dart';
 import 'package:cycle_care/domain/entities/enums.dart';
+import 'package:cycle_care/domain/entities/period_day_log.dart';
 import 'package:cycle_care/domain/entities/period_record.dart';
 import 'package:cycle_care/domain/entities/prediction.dart';
 import 'package:cycle_care/domain/entities/sync_state.dart';
 import 'package:cycle_care/domain/entities/user_cycle_settings.dart';
 import 'package:cycle_care/features/calendar/presentation/calendar_page.dart';
 import 'package:cycle_care/features/dashboard/presentation/dashboard_page.dart';
+import 'package:cycle_care/features/history/presentation/history_page.dart';
 import 'package:cycle_care/features/statistics/presentation/statistics_page.dart';
 
 void main() {
@@ -45,6 +47,14 @@ void main() {
     userId: 'user-1',
     showOvulationEstimate: true,
     showFertileWindow: true,
+    reminderEnabled: false,
+    initialSyncCompleted: true,
+    updatedAt: DateTime(2026, 8, 1),
+  );
+  final hiddenSettings = UserCycleSettingsRecord(
+    userId: 'user-1',
+    showOvulationEstimate: false,
+    showFertileWindow: false,
     reminderEnabled: false,
     initialSyncCompleted: true,
     updatedAt: DateTime(2026, 8, 1),
@@ -156,14 +166,6 @@ void main() {
   testWidgets('dashboard empty state keeps the primary recording action',
       (tester) async {
     _useTallViewport(tester);
-    final emptySettings = UserCycleSettingsRecord(
-      userId: 'user-1',
-      showOvulationEstimate: false,
-      showFertileWindow: false,
-      reminderEnabled: false,
-      initialSyncCompleted: true,
-      updatedAt: DateTime(2026, 8, 1),
-    );
     const emptyInsights = CycleInsights(
       status: CycleStatus(),
       statistics: CycleStatistics.empty(),
@@ -175,7 +177,7 @@ void main() {
         overrides: [
           activePeriodsProvider.overrideWith((ref) => Stream.value([])),
           predictionProvider.overrideWith((ref) => Stream.value(null)),
-          userCycleSettingsProvider.overrideWith((ref) async => emptySettings),
+          userCycleSettingsProvider.overrideWith((ref) async => hiddenSettings),
           cycleInsightsProvider.overrideWith((ref) async => emptyInsights),
           syncSnapshotProvider.overrideWithValue(
             const SyncGateSnapshot(
@@ -201,7 +203,11 @@ void main() {
   testWidgets('calendar explains recorded and projected markers',
       (tester) async {
     _useTallViewport(tester);
-    final todayPeriod = period.copyWith(startDate: DateTime(2026, 8, 1));
+    final augustPeriod = period.copyWith(
+      startDate: DateTime(2026, 8, 1),
+      endDate: DateTime(2026, 8, 3),
+      periodDurationDays: 3,
+    );
     final projection = FutureCycleProjection(
       sequence: 1,
       predictedStart: DateTime(2026, 8, 1),
@@ -214,17 +220,206 @@ void main() {
       ProviderScope(
         overrides: [
           activePeriodsProvider
-              .overrideWith((ref) => Stream.value([todayPeriod])),
+              .overrideWith((ref) => Stream.value([augustPeriod])),
+          predictionProvider.overrideWith((ref) => Stream.value(prediction)),
           projectionsProvider.overrideWithValue([projection]),
           userCycleSettingsProvider.overrideWith((ref) async => settings),
+          syncSnapshotProvider.overrideWithValue(
+            const SyncGateSnapshot(
+              status: SyncGateStatus.ready,
+              pendingCount: 0,
+            ),
+          ),
         ],
-        child: const MaterialApp(home: CalendarPage()),
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const CalendarPage(),
+        ),
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Rentang perkiraan'), findsOneWidget);
-    expect(find.textContaining('Tercatat: period'), findsOneWidget);
-    expect(find.textContaining('Pusat perkiraan 1'), findsOneWidget);
+    expect(find.text('Period tercatat'), findsWidgets);
+    expect(find.text('Perkiraan period'), findsWidgets);
+    expect(
+      find.textContaining('rentang perkiraan period siklus ke-1'),
+      findsOneWidget,
+    );
+    expect(find.textContaining('bukan panduan kontrasepsi'), findsOneWidget);
+    expect(
+      find.bySemanticsLabel(
+        '1 Agustus, period tercatat, perkiraan period, dipilih.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('history sorts records and keeps offline data usable',
+      (tester) async {
+    _useTallViewport(tester);
+    final augustPeriod = PeriodRecord(
+      id: 'period-august',
+      startDate: DateTime(2026, 8, 1),
+      endDate: DateTime(2026, 8, 3),
+      cycleLengthDays: 29,
+      periodDurationDays: 3,
+      createdAt: DateTime(2026, 8, 1),
+      updatedAt: DateTime(2026, 8, 3),
+      syncStatus: SyncStatus.synced,
+    );
+    final flowLogs = [
+      PeriodDayLogRecord(
+        id: 'flow-1',
+        periodEntryId: augustPeriod.id,
+        logDate: DateTime(2026, 8, 1),
+        flow: MenstrualFlow.light.value,
+        createdAt: DateTime(2026, 8, 1),
+        updatedAt: DateTime(2026, 8, 1),
+      ),
+      PeriodDayLogRecord(
+        id: 'flow-2',
+        periodEntryId: augustPeriod.id,
+        logDate: DateTime(2026, 8, 2),
+        flow: MenstrualFlow.medium.value,
+        createdAt: DateTime(2026, 8, 2),
+        updatedAt: DateTime(2026, 8, 2),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activePeriodsProvider.overrideWith(
+            (ref) => Stream.value([period, augustPeriod]),
+          ),
+          flowLogsProvider.overrideWith((ref) => Stream.value(flowLogs)),
+          syncSnapshotProvider.overrideWithValue(
+            const SyncGateSnapshot(
+              status: SyncGateStatus.offlineReady,
+              pendingCount: 2,
+            ),
+          ),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const HistoryPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final august = find.text('1–3 Agustus 2026');
+    final july = find.text('1–5 Juli 2026');
+    expect(august, findsOneWidget);
+    expect(july, findsOneWidget);
+    expect(tester.getTopLeft(august).dy, lessThan(tester.getTopLeft(july).dy));
+    expect(find.text('Ringan 1 hari · Sedang 1 hari'), findsOneWidget);
+    expect(find.text('Tersimpan di perangkat'), findsOneWidget);
+    expect(find.text('Lihat ringkasan'), findsNWidgets(2));
+  });
+
+  testWidgets('history empty state follows the approved copy', (tester) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activePeriodsProvider.overrideWith((ref) => Stream.value([])),
+          flowLogsProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const HistoryPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Belum ada riwayat period.'), findsOneWidget);
+    expect(
+      find.text('Catat period pertamamu untuk mulai melihat pola siklus.'),
+      findsOneWidget,
+    );
+    expect(find.text('Catat period'), findsWidgets);
+  });
+
+  testWidgets('phase two screens render on narrow dark layouts',
+      (tester) async {
+    _useViewport(tester, const Size(320, 1600));
+    const readySync = SyncGateSnapshot(
+      status: SyncGateStatus.ready,
+      pendingCount: 0,
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activePeriodsProvider.overrideWith((ref) => Stream.value([period])),
+          predictionProvider.overrideWith((ref) => Stream.value(null)),
+          projectionsProvider.overrideWithValue(const []),
+          userCycleSettingsProvider.overrideWith((ref) async => hiddenSettings),
+          syncSnapshotProvider.overrideWithValue(readySync),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.dark(),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Kalender'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.byType(CalendarPage))).brightness,
+      Brightness.dark,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activePeriodsProvider.overrideWith((ref) => Stream.value([period])),
+          flowLogsProvider.overrideWith((ref) => Stream.value([])),
+          syncSnapshotProvider.overrideWithValue(readySync),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.dark(),
+          home: const HistoryPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Riwayat period'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.byType(HistoryPage))).brightness,
+      Brightness.dark,
+    );
+  });
+
+  testWidgets('calendar error state does not expose backend details',
+      (tester) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          activePeriodsProvider.overrideWith(
+            (ref) => Stream.error(Exception('private database detail')),
+          ),
+          predictionProvider.overrideWith((ref) => Stream.value(null)),
+          userCycleSettingsProvider.overrideWith((ref) async => hiddenSettings),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const CalendarPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Kalender belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private database detail'), findsNothing);
   });
 
   testWidgets('statistics displays calculated values and methodology',
@@ -246,8 +441,12 @@ void main() {
 }
 
 void _useTallViewport(WidgetTester tester) {
+  _useViewport(tester, const Size(1080, 4000));
+}
+
+void _useViewport(WidgetTester tester, Size size) {
   tester.view.devicePixelRatio = 1;
-  tester.view.physicalSize = const Size(1080, 4000);
+  tester.view.physicalSize = size;
   addTearDown(tester.view.resetDevicePixelRatio);
   addTearDown(tester.view.resetPhysicalSize);
 }
