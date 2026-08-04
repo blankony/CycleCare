@@ -56,7 +56,13 @@ macos/Pods/
 /design-system/
 /docs/
 /test/
+!/test/
+/test/*
+!/test/pass2/
+/test/pass2/*
+!/test/pass2/cycle_statistics_service_test.dart
 /graphify-out/
+/.stitch/
 /supabase.md
 /supabase/.temp/
 /.codex

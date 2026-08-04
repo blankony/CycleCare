@@ -74,6 +74,10 @@ class CycleStatistics {
     this.longestPeriod,
     this.recentTrendDays,
     this.mostCommonFlow,
+    this.cycleLengthSamples = 0,
+    this.periodDurationSamples = 0,
+    this.recentCycleLengths = const [],
+    this.flowCounts = const {},
   });
 
   const CycleStatistics.empty()
@@ -102,6 +106,10 @@ class CycleStatistics {
   final double? recentTrendDays;
   final Map<PeriodClassification, int> classificationCounts;
   final MenstrualFlow? mostCommonFlow;
+  final int cycleLengthSamples;
+  final int periodDurationSamples;
+  final List<int> recentCycleLengths;
+  final Map<MenstrualFlow, int> flowCounts;
 }
 
 class AdultReferenceResult {

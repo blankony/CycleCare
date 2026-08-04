@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -15,7 +17,9 @@ import 'package:cycle_care/domain/entities/user_cycle_settings.dart';
 import 'package:cycle_care/features/calendar/presentation/calendar_page.dart';
 import 'package:cycle_care/features/dashboard/presentation/dashboard_page.dart';
 import 'package:cycle_care/features/history/presentation/history_page.dart';
+import 'package:cycle_care/features/period_form/presentation/period_form_page.dart';
 import 'package:cycle_care/features/statistics/presentation/statistics_page.dart';
+import 'package:cycle_care/features/summary/presentation/summary_page.dart';
 
 void main() {
   setUpAll(() => initializeDateFormatting('id_ID'));
@@ -29,6 +33,32 @@ void main() {
     createdAt: DateTime(2026, 7, 1),
     updatedAt: DateTime(2026, 7, 5),
     syncStatus: SyncStatus.synced,
+  );
+  final summaryPeriod = PeriodRecord(
+    id: 'summary-period',
+    startDate: DateTime(2026, 8, 1),
+    endDate: DateTime(2026, 8, 3),
+    cycleLengthDays: 29,
+    periodDurationDays: 3,
+    notes: 'Sedikit kram di hari pertama.',
+    createdAt: DateTime(2026, 8, 1),
+    updatedAt: DateTime(2026, 8, 3),
+    syncStatus: SyncStatus.synced,
+  );
+  final summary = EndOfCycleSummary(
+    period: summaryPeriod,
+    flowCounts: const {
+      MenstrualFlow.spotting: 1,
+      MenstrualFlow.light: 1,
+      MenstrualFlow.medium: 1,
+    },
+    previousAverageCycleLength: 28,
+    differenceFromAverage: 1,
+    reference: const AdultReferenceResult(
+      cycleLength: ReferenceComparison.withinRange,
+      bleedingDuration: ReferenceComparison.withinRange,
+    ),
+    pattern: CyclePattern.consistent,
   );
   final prediction = CyclePrediction(
     ready: true,
@@ -76,6 +106,15 @@ void main() {
     shortestPeriod: 4,
     longestPeriod: 6,
     classificationCounts: {PeriodClassification.onWindow: 2},
+    cycleLengthSamples: 3,
+    periodDurationSamples: 3,
+    recentCycleLengths: [27, 29, 28],
+    flowCounts: {
+      MenstrualFlow.spotting: 1,
+      MenstrualFlow.light: 3,
+      MenstrualFlow.medium: 4,
+      MenstrualFlow.heavy: 2,
+    },
   );
 
   testWidgets('dashboard shows late and fertility context', (tester) async {
@@ -422,6 +461,189 @@ void main() {
     expect(find.textContaining('private database detail'), findsNothing);
   });
 
+  testWidgets('period edit form shows dates and independent flow controls',
+      (tester) async {
+    _useTallViewport(tester);
+    final formRecord = PeriodRecord(
+      id: 'period-form',
+      startDate: DateTime(2026, 8, 1),
+      endDate: DateTime(2026, 8, 3),
+      periodDurationDays: 3,
+      cycleLengthDays: 29,
+      createdAt: DateTime(2026, 8, 1),
+      updatedAt: DateTime(2026, 8, 3),
+      syncStatus: SyncStatus.synced,
+    );
+    final formLogs = [
+      PeriodDayLogRecord(
+        id: 'form-flow-1',
+        periodEntryId: formRecord.id,
+        logDate: DateTime(2026, 8, 1),
+        flow: MenstrualFlow.light.value,
+        createdAt: DateTime(2026, 8, 1),
+        updatedAt: DateTime(2026, 8, 1),
+      ),
+    ];
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          flowLogsProvider.overrideWith((ref) => Stream.value(formLogs)),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: PeriodFormPage(record: formRecord),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Perbarui period'), findsOneWidget);
+    expect(find.text('1 Agustus 2026'), findsWidgets);
+    expect(find.text('3 Agustus 2026'), findsWidgets);
+    expect(find.text('Flow harian'), findsOneWidget);
+    expect(find.text('Bercak'), findsNWidgets(3));
+    expect(find.text('Ringan'), findsNWidgets(3));
+    expect(find.text('Simpan perubahan'), findsOneWidget);
+    expect(find.textContaining('data pribadi akunmu'), findsOneWidget);
+  });
+
+  testWidgets('new period form supports an ongoing record and flow draft',
+      (tester) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          flowLogsProvider.overrideWith((ref) => Stream.value([])),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const PeriodFormPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Catat period'), findsOneWidget);
+    expect(find.text('Masih berlangsung'), findsOneWidget);
+    expect(find.text('4 Agustus 2026'), findsWidgets);
+    expect(find.text('Simpan catatan'), findsOneWidget);
+  });
+
+  testWidgets('summary separates recorded facts from calculated insight',
+      (tester) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          endOfCycleSummaryProvider('summary-period')
+              .overrideWith((ref) async => summary),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.light(),
+          home: const SummaryPage(periodId: 'summary-period'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Tercatat'), findsOneWidget);
+    expect(find.text('3 hari'), findsOneWidget);
+    expect(find.text('1\u20133 Agustus 2026'), findsOneWidget);
+    expect(find.text('Aliran darah'), findsOneWidget);
+    expect(find.text('Sedikit kram di hari pertama.'), findsOneWidget);
+    expect(find.text('Wawasan'), findsOneWidget);
+    expect(find.text('Edit data'), findsOneWidget);
+    expect(find.text('Arsipkan catatan'), findsOneWidget);
+  });
+
+  testWidgets('summary uses safe loading, not-found, and error states',
+      (tester) async {
+    final completer = Completer<EndOfCycleSummary?>();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          endOfCycleSummaryProvider('missing-period')
+              .overrideWith((ref) => completer.future),
+        ],
+        child: const MaterialApp(
+          home: SummaryPage(periodId: 'missing-period'),
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(find.text('Menyiapkan ringkasan siklusmu...'), findsOneWidget);
+
+    completer.complete(null);
+    await tester.pumpAndSettle();
+    expect(find.text('Ringkasan tidak ditemukan'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          endOfCycleSummaryProvider('error-period').overrideWith(
+            (ref) async => throw Exception('private database detail'),
+          ),
+        ],
+        child: const MaterialApp(
+          home: SummaryPage(periodId: 'error-period'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(
+      find.text(
+        'Ringkasan belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private database detail'), findsNothing);
+  });
+
+  testWidgets('phase three screens render on narrow dark layouts',
+      (tester) async {
+    _useViewport(tester, const Size(320, 1800));
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          endOfCycleSummaryProvider('summary-period')
+              .overrideWith((ref) async => summary),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.dark(),
+          home: const SummaryPage(periodId: 'summary-period'),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Ringkasan siklus'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.byType(SummaryPage))).brightness,
+      Brightness.dark,
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cycleStatisticsProvider.overrideWith((ref) async => statistics),
+        ],
+        child: MaterialApp(
+          theme: CycleCareTheme.dark(),
+          home: const StatisticsPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('Statistik pribadi'), findsOneWidget);
+    expect(
+      Theme.of(tester.element(find.byType(StatisticsPage))).brightness,
+      Brightness.dark,
+    );
+  });
+
   testWidgets('statistics displays calculated values and methodology',
       (tester) async {
     _useTallViewport(tester);
@@ -434,9 +656,53 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    expect(find.text('Berdasarkan 3 siklus terakhir'), findsOneWidget);
     expect(find.text('Cukup konsisten'), findsOneWidget);
     expect(find.text('28.0 hari'), findsWidgets);
-    expect(find.textContaining('Rentang siklus'), findsOneWidget);
+    expect(find.text('Riwayat panjang siklus'), findsOneWidget);
+    expect(find.text('Intensitas aliran'), findsOneWidget);
+    expect(find.textContaining('hingga 12 period terbaru'), findsOneWidget);
+  });
+
+  testWidgets('statistics explains when cycle samples are insufficient',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cycleStatisticsProvider.overrideWith(
+            (ref) async => const CycleStatistics.empty(),
+          ),
+        ],
+        child: const MaterialApp(home: StatisticsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Data belum cukup'), findsOneWidget);
+    expect(find.textContaining('setidaknya dua siklus'), findsOneWidget);
+  });
+
+  testWidgets('statistics error does not expose backend details',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          cycleStatisticsProvider.overrideWith(
+            (ref) async => throw Exception('private analytics detail'),
+          ),
+        ],
+        child: const MaterialApp(home: StatisticsPage()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text(
+        'Statistik belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('private analytics detail'), findsNothing);
   });
 }
 

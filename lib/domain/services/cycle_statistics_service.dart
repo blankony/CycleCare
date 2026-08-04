@@ -46,8 +46,12 @@ class CycleStatisticsService {
             (classificationCounts[classification] ?? 0) + 1;
       }
     }
+    final samplePeriodIds = sample.map((period) => period.id).toSet();
     final flowCounts = <MenstrualFlow, int>{};
-    for (final log in flowLogs.where((log) => log.deletedAt == null)) {
+    for (final log in flowLogs.where(
+      (log) =>
+          log.deletedAt == null && samplePeriodIds.contains(log.periodEntryId),
+    )) {
       final flow = MenstrualFlowText.fromValue(log.flow);
       if (flow != null) flowCounts[flow] = (flowCounts[flow] ?? 0) + 1;
     }
@@ -80,6 +84,10 @@ class CycleStatisticsService {
           : _average(recent)! - averageCycle,
       classificationCounts: classificationCounts,
       mostCommonFlow: commonFlow,
+      cycleLengthSamples: cycleLengths.length,
+      periodDurationSamples: durations.length,
+      recentCycleLengths: recent,
+      flowCounts: flowCounts,
     );
   }
 

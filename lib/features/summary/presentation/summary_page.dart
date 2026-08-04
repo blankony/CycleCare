@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
-import '../../../core/date/date_only.dart';
-import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/cycle_insights.dart';
+import 'widgets/summary_sections.dart';
 
 class SummaryPage extends ConsumerWidget {
   const SummaryPage({required this.periodId, super.key});
@@ -15,95 +15,94 @@ class SummaryPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final summary = ref.watch(endOfCycleSummaryProvider(periodId));
+    final action = ref.watch(periodActionsProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Ringkasan period')),
-      body: summary.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) =>
-            Center(child: Text('Ringkasan belum dapat dimuat: $error')),
-        data: (value) => value == null
-            ? const EmptyState(
-                title: 'Ringkasan tidak ditemukan',
-                message: 'Catatan period mungkin sudah dihapus.')
-            : ListView(
-                padding: const EdgeInsets.all(18),
-                children: [
-                  _SummaryCard(value: value),
-                  const SizedBox(height: 12),
-                  Card(
-                    child: ListTile(
-                      leading: const Icon(Icons.health_and_safety_outlined),
-                      title: Text(value.reference.cycleLength.label),
-                      subtitle: Text(
-                          'Siklus: ${value.reference.cycleLength.label}\nDurasi period: ${value.reference.bleedingDuration.label}'),
-                    ),
+      appBar: const CycleCareAppBar(title: 'Ringkasan siklus'),
+      body: CycleCareBackground(
+        child: summary.when(
+          loading: () => const CycleCareLoadingState(
+            message: 'Menyiapkan ringkasan siklusmu...',
+            cardCount: 4,
+          ),
+          error: (_, __) => CycleCareErrorState(
+            message:
+                'Ringkasan belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+            onRetry: () => ref.invalidate(
+              endOfCycleSummaryProvider(periodId),
+            ),
+          ),
+          data: (value) => value == null
+              ? EmptyState(
+                  icon: Icons.article_outlined,
+                  title: 'Ringkasan tidak ditemukan',
+                  message:
+                      'Catatan ini mungkin sudah diarsipkan atau tidak lagi tersedia.',
+                  action: OutlinedButton.icon(
+                    onPressed: () => context.go('/history'),
+                    icon: const Icon(Icons.history_rounded),
+                    label: const Text('Kembali ke riwayat'),
                   ),
-                  if (value.reference.shouldSuggestConsultation) ...[
-                    const SizedBox(height: 12),
-                    const Text(
-                        'Pertimbangkan berkonsultasi dengan tenaga kesehatan jika perubahan ini mengkhawatirkan, berulang, atau mengganggu aktivitas.'),
-                  ],
-                  const SizedBox(height: 18),
-                  const MedicalDisclaimer(),
-                  const SizedBox(height: 18),
-                  FilledButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Selesai'),
+                )
+              : CycleSummaryContent(
+                  value: value,
+                  isArchiving: action.isLoading,
+                  onEdit: () => context.push(
+                    '/add-period',
+                    extra: value.period,
                   ),
-                ],
-              ),
-      ),
-    );
-  }
-}
-
-class _SummaryCard extends StatelessWidget {
-  const _SummaryCard({required this.value});
-
-  final EndOfCycleSummary value;
-
-  @override
-  Widget build(BuildContext context) {
-    final period = value.period;
-    final flowText = value.flowCounts.isEmpty
-        ? 'Belum ada flow yang dicatat'
-        : value.flowCounts.entries
-            .map((entry) => '${entry.key.label}: ${entry.value} hari')
-            .join(' · ');
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Period ${DateOnly.display(period.startDate)}',
-                style: Theme.of(context).textTheme.titleLarge),
-            const SizedBox(height: 12),
-            Text(period.endDate == null
-                ? 'Masih berlangsung'
-                : 'Selesai ${DateOnly.display(period.endDate!)}'),
-            if (period.periodDurationDays != null)
-              Text('Durasi: ${period.periodDurationDays} hari'),
-            if (period.cycleLengthDays != null)
-              Text('Panjang siklus: ${period.cycleLengthDays} hari'),
-            if (value.previousAverageCycleLength != null)
-              Text(
-                  'Rata-rata sebelumnya: ${value.previousAverageCycleLength!.toStringAsFixed(1)} hari'),
-            if (value.differenceFromAverage != null)
-              Text(
-                  'Perbedaan dari rata-rata: ${value.differenceFromAverage!.toStringAsFixed(1)} hari'),
-            const SizedBox(height: 10),
-            Text('Flow: $flowText'),
-            Text('Pola pribadi: ${value.pattern.label}'),
-            if (period.classification != null)
-              Text('Dibandingkan perkiraan: ${period.classification!.label}'),
-            if (period.notes?.isNotEmpty == true) ...[
-              const SizedBox(height: 8),
-              Text('Catatan: ${period.notes}'),
-            ],
-          ],
+                  onArchive: () => _archive(context, ref, value),
+                ),
         ),
       ),
     );
+  }
+
+  Future<void> _archive(
+    BuildContext context,
+    WidgetRef ref,
+    EndOfCycleSummary value,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Arsipkan catatan?'),
+        content: const Text(
+          'Catatan tidak dihapus permanen dan dapat dipulihkan dari Pengaturan.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Arsipkan'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !context.mounted) return;
+
+    await ref.read(periodActionsProvider.notifier).delete(value.period.id);
+    if (!context.mounted) return;
+
+    final result = ref.read(periodActionsProvider);
+    if (result.hasError) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Catatan belum dapat diarsipkan. Coba lagi tanpa mengubah data lain.',
+          ),
+        ),
+      );
+      return;
+    }
+
+    if (context.canPop()) {
+      context.pop();
+    } else {
+      context.go('/history');
+    }
   }
 }

@@ -1,9 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/providers.dart';
+import '../../../core/date/date_only.dart';
 import '../../../core/errors/app_failure.dart';
 import '../../../data/repositories/period_repository.dart';
 import '../../../data/repositories/period_day_log_repository.dart';
+import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/period_record.dart';
 import '../../../domain/services/notification_service.dart';
 import '../../../domain/services/period_recalculation_service.dart';
@@ -54,6 +56,77 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.updatePeriod(record: record);
       await _recalculateAndNotify();
+      _invalidateData();
+      await _syncBestEffort();
+    });
+  }
+
+  Future<void> saveForm({
+    required DateTime startDate,
+    required DateTime? endDate,
+    required String? notes,
+    required Map<DateTime, MenstrualFlow?> flowChanges,
+    PeriodRecord? record,
+  }) async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(() async {
+      PeriodRecord savedRecord;
+      if (record == null) {
+        await repository.createPeriod(startDate: startDate, notes: notes);
+        final normalizedStart = DateOnly.normalize(startDate);
+        final records = await repository.getActivePeriods();
+        savedRecord = records.firstWhere(
+          (item) => DateOnly.normalize(item.startDate) == normalizedStart,
+          orElse: () => throw const AppFailure(
+            'Catatan yang baru disimpan belum dapat ditemukan.',
+          ),
+        );
+        if (endDate != null) {
+          savedRecord = savedRecord.copyWith(endDate: endDate);
+          await repository.updatePeriod(record: savedRecord);
+        }
+      } else {
+        savedRecord = record.copyWith(
+          startDate: startDate,
+          endDate: endDate,
+          clearEndDate: endDate == null,
+          notes: notes,
+        );
+        await repository.updatePeriod(record: savedRecord);
+        await flowRepository.softDeleteOutsideRange(
+          periodEntryId: savedRecord.id,
+          startDate: startDate,
+          endDate: endDate,
+        );
+      }
+
+      final rangeEnd = DateOnly.normalize(endDate ?? DateTime.now());
+      final existingLogs = await flowRepository.getForPeriod(savedRecord.id);
+      for (final entry in flowChanges.entries) {
+        final date = DateOnly.normalize(entry.key);
+        if (date.isBefore(DateOnly.normalize(startDate)) ||
+            date.isAfter(rangeEnd)) {
+          continue;
+        }
+        final existing = existingLogs.where(
+          (log) => DateOnly.normalize(log.logDate) == date,
+        );
+        if (entry.value == null) {
+          for (final log in existing) {
+            await flowRepository.softDelete(log.id);
+          }
+        } else {
+          await flowRepository.save(
+            periodEntryId: savedRecord.id,
+            logDate: date,
+            flow: entry.value!.value,
+          );
+        }
+      }
+
+      await _recalculateAndNotify(
+        reminderStartDate: record == null && endDate == null ? startDate : null,
+      );
       _invalidateData();
       await _syncBestEffort();
     });
