@@ -114,13 +114,14 @@ String? resolveAppRedirect({
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
 
-  static const double largeScreenMinWidth = 840;
+  static const double largeScreenMinWidth = 900;
 
   final StatefulNavigationShell navigationShell;
 
   @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
+          final colors = context.cycleCareColors;
           if (constraints.maxWidth > largeScreenMinWidth) {
             return Scaffold(
               backgroundColor: Colors.transparent,
@@ -132,15 +133,9 @@ class AppShell extends StatelessWidget {
                         padding: const EdgeInsets.all(CycleCareSpacing.sm),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.90),
+                            color: colors.surfaceTranslucent,
                             borderRadius: CycleCareRadius.cardBorder,
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x120F172A),
-                                blurRadius: 24,
-                                offset: Offset(0, 10),
-                              ),
-                            ],
+                            border: Border.all(color: colors.divider),
                           ),
                           child: NavigationRail(
                             selectedIndex: navigationShell.currentIndex,
@@ -158,12 +153,7 @@ class AppShell extends StatelessWidget {
                                 height: 48,
                                 alignment: Alignment.center,
                                 decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      CycleCareColors.period,
-                                      Color(0xFF8B5CF6),
-                                    ],
-                                  ),
+                                  color: CycleCareColors.period,
                                   shape: BoxShape.circle,
                                 ),
                                 child: const Text(
@@ -189,7 +179,7 @@ class AppShell extends StatelessWidget {
           }
 
           return Scaffold(
-            backgroundColor: CycleCareColors.background,
+            backgroundColor: colors.background,
             body: navigationShell,
             bottomNavigationBar: SafeArea(
               top: false,
@@ -201,15 +191,9 @@ class AppShell extends StatelessWidget {
               ),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.96),
+                  color: colors.surfaceTranslucent,
                   borderRadius: CycleCareRadius.cardBorder,
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x160F172A),
-                      blurRadius: 28,
-                      offset: Offset(0, 10),
-                    ),
-                  ],
+                  border: Border.all(color: colors.divider),
                 ),
                 child: ClipRRect(
                   borderRadius: CycleCareRadius.cardBorder,

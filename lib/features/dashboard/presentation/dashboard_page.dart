@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 
 import '../../../app/design/cycle_care_design.dart';
 import '../../../app/providers.dart';
@@ -12,6 +13,7 @@ import '../../../domain/entities/cycle_insights.dart';
 import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/period_record.dart';
 import '../../../domain/entities/prediction.dart';
+import '../../../domain/entities/sync_state.dart';
 import '../../../domain/entities/user_cycle_settings.dart';
 import 'widgets/cycle_ring.dart';
 
@@ -24,10 +26,16 @@ class DashboardPage extends ConsumerWidget {
     final prediction = ref.watch(predictionProvider).valueOrNull;
     final settings = ref.watch(userCycleSettingsProvider).valueOrNull;
     final insights = ref.watch(cycleInsightsProvider).valueOrNull;
+    final syncSnapshot = ref.watch(syncSnapshotProvider);
+
     ref.listen(periodActionsProvider, (_, next) {
       next.whenOrNull(
-        error: (error, _) => ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error.toString())),
+        error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Perubahan belum dapat disimpan. Data sebelumnya tetap aman.',
+            ),
+          ),
         ),
       );
     });
@@ -41,7 +49,7 @@ class DashboardPage extends ConsumerWidget {
             loading: () => const CycleCareLoadingState(),
             error: (_, __) => CycleCareErrorState(
               message:
-                  'Data siklusmu tetap aman. Periksa koneksi lalu coba lagi.',
+                  'Data lokalmu tetap aman. Coba muat kembali untuk menampilkan catatan terbaru.',
               onRetry: () {
                 ref.invalidate(activePeriodsProvider);
                 ref.invalidate(cycleInsightsProvider);
@@ -52,12 +60,14 @@ class DashboardPage extends ConsumerWidget {
               prediction: prediction,
               settings: settings,
               insights: insights,
-              syncLabel: 'Data tersimpan di perangkat',
+              syncSnapshot: syncSnapshot,
               onRefresh: () async {
                 ref.invalidate(activePeriodsProvider);
+                ref.invalidate(predictionProvider);
                 ref.invalidate(cycleInsightsProvider);
                 await ref.read(syncControllerProvider).synchronizeNow();
               },
+              onRetrySync: () => ref.read(syncControllerProvider).retry(),
             ),
           ),
         ),
@@ -72,27 +82,37 @@ class _DashboardContent extends StatelessWidget {
     required this.prediction,
     required this.settings,
     required this.insights,
-    required this.syncLabel,
+    required this.syncSnapshot,
     required this.onRefresh,
+    required this.onRetrySync,
   });
 
   final List<PeriodRecord> records;
   final CyclePrediction? prediction;
   final UserCycleSettingsRecord? settings;
   final CycleInsights? insights;
-  final String syncLabel;
+  final SyncGateSnapshot syncSnapshot;
   final Future<void> Function() onRefresh;
+  final VoidCallback onRetrySync;
 
   @override
   Widget build(BuildContext context) {
-    final ringData = _buildRingData(
+    final showFertile = settings?.showFertileWindow == true;
+    final showOvulation = settings?.showOvulationEstimate == true;
+    final ongoing =
+        records.where((record) => record.endDate == null).firstOrNull;
+    final timelineData = _buildTimelineData(
       records: records,
       prediction: prediction,
       insights: insights,
-      showFertile: settings?.showFertileWindow == true,
-      showOvulation: settings?.showOvulationEstimate == true,
+      showFertile: showFertile,
+      showOvulation: showOvulation,
     );
-    final ongoing = records.where((record) => record.endDate == null).firstOrNull;
+    final showsSyncBanner = {
+      SyncGateStatus.synchronizing,
+      SyncGateStatus.offlineReady,
+      SyncGateStatus.failed,
+    }.contains(syncSnapshot.status);
 
     return RefreshIndicator(
       onRefresh: onRefresh,
@@ -109,71 +129,55 @@ class _DashboardContent extends StatelessWidget {
             sliver: SliverToBoxAdapter(
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 1180),
+                  constraints: const BoxConstraints(maxWidth: 900),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      _DashboardHeader(syncLabel: syncLabel),
-                      const SizedBox(height: CycleCareSpacing.xl),
-                      LayoutBuilder(
-                        builder: (context, constraints) {
-                          final ring = _RingCard(data: ringData);
-                          final overview = _OverviewPanel(
-                            records: records,
-                            insights: insights,
-                            ongoing: ongoing,
-                          );
-                          if (constraints.maxWidth >= 860) {
-                            return Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Expanded(flex: 6, child: ring),
-                                const SizedBox(width: CycleCareSpacing.xl),
-                                Expanded(flex: 5, child: overview),
-                              ],
-                            );
-                          }
-                          return Column(
-                            children: [
-                              ring,
-                              const SizedBox(height: CycleCareSpacing.lg),
-                              overview,
-                            ],
-                          );
-                        },
+                      _DashboardHeader(syncSnapshot: syncSnapshot),
+                      const SizedBox(height: CycleCareSpacing.lg),
+                      if (showsSyncBanner) ...[
+                        CycleCareSyncBanner(
+                          snapshot: syncSnapshot,
+                          onRetry: onRetrySync,
+                        ),
+                        const SizedBox(height: CycleCareSpacing.md),
+                      ],
+                      _CycleHeroCard(
+                        records: records,
+                        prediction: prediction,
+                        insights: insights,
+                        ongoing: ongoing,
+                      ),
+                      const SizedBox(height: CycleCareSpacing.md),
+                      _CycleTimelineCard(
+                        data: timelineData,
+                        showFertile: showFertile && insights?.fertility != null,
+                        showOvulation:
+                            showOvulation && insights?.fertility != null,
+                        showPrediction: prediction?.ready == true,
                       ),
                       const SizedBox(height: CycleCareSpacing.xxl),
                       const CycleCareSectionHeader(
                         title: 'Perkiraan siklus',
-                        subtitle: 'Tanggal dapat berubah mengikuti catatan terbaru.',
+                        subtitle:
+                            'Tanggal dapat berubah mengikuti catatan terbaru.',
                       ),
                       const SizedBox(height: CycleCareSpacing.md),
                       _PhaseCards(
                         prediction: prediction,
                         fertility: insights?.fertility,
-                        showFertile: settings?.showFertileWindow == true,
-                        showOvulation: settings?.showOvulationEstimate == true,
+                        showFertile: showFertile,
+                        showOvulation: showOvulation,
                       ),
                       const SizedBox(height: CycleCareSpacing.xxl),
-                      _TodayCard(insights: insights, ringData: ringData),
-                      if (insights?.status.isLate == true) ...[
-                        const SizedBox(height: CycleCareSpacing.md),
-                        _LateCard(days: insights!.status.lateDays),
-                      ],
-                      const SizedBox(height: CycleCareSpacing.xxl),
-                      CycleCareSectionHeader(
-                        title: 'Wawasan pribadi',
-                        subtitle: 'Ringkasan dari riwayat yang kamu catat.',
-                        action: TextButton(
-                          onPressed: () => context.push('/statistics'),
-                          child: const Text('Lihat semua'),
-                        ),
-                      ),
-                      const SizedBox(height: CycleCareSpacing.md),
-                      _InsightCards(
-                        statistics: insights?.statistics,
+                      _RecentCyclesCard(
                         records: records,
+                        statistics: insights?.statistics,
                       ),
+                      if (showFertile && insights?.fertility != null) ...[
+                        const SizedBox(height: CycleCareSpacing.lg),
+                        const _FertilitySafetyNote(),
+                      ],
                       const SizedBox(height: CycleCareSpacing.lg),
                       const MedicalDisclaimer(),
                     ],
@@ -189,143 +193,112 @@ class _DashboardContent extends StatelessWidget {
 }
 
 class _DashboardHeader extends StatelessWidget {
-  const _DashboardHeader({required this.syncLabel});
+  const _DashboardHeader({required this.syncSnapshot});
 
-  final String syncLabel;
+  final SyncGateSnapshot syncSnapshot;
 
   @override
-  Widget build(BuildContext context) => Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Hari ini', style: Theme.of(context).textTheme.bodyLarge),
-                const SizedBox(height: 2),
-                Text(
-                  'Pantau siklusmu',
-                  style: Theme.of(context).textTheme.headlineLarge,
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.cloud_done_outlined, size: 16),
-                    const SizedBox(width: 6),
-                    Flexible(
-                      child: Text(
-                        syncLabel,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
+  Widget build(BuildContext context) {
+    final status = _syncChip(syncSnapshot.status);
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Container(
+                    width: 36,
+                    height: 36,
+                    decoration: const BoxDecoration(
+                      color: CycleCareColors.period,
+                      shape: BoxShape.circle,
                     ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          IconButton(
-            tooltip: 'Buka pengaturan',
-            onPressed: () => context.go('/settings'),
-            icon: const Icon(Icons.tune_rounded),
-          ),
-          const SizedBox(width: CycleCareSpacing.xs),
-          Semantics(
-            label: 'Avatar CycleCare',
-            child: Container(
-              width: 50,
-              height: 50,
-              alignment: Alignment.center,
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  colors: [CycleCareColors.period, Color(0xFF8B5CF6)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-                shape: BoxShape.circle,
+                    child: const Icon(
+                      Icons.water_drop_rounded,
+                      size: 20,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(width: CycleCareSpacing.xs),
+                  Text(
+                    'CycleCare',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                          color: CycleCareColors.periodStrong,
+                        ),
+                  ),
+                ],
               ),
-              child: const Text(
-                'CC',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w800,
-                ),
+              const SizedBox(height: CycleCareSpacing.xs),
+              CycleCareStatusChip(
+                label: status.label,
+                icon: status.icon,
+                tone: status.tone,
               ),
-            ),
+            ],
           ),
-        ],
-      );
-}
-
-class _RingCard extends StatelessWidget {
-  const _RingCard({required this.data});
-
-  final CycleRingData data;
-
-  @override
-  Widget build(BuildContext context) => CycleCareCard(
-        padding: const EdgeInsets.all(CycleCareSpacing.xl),
-        child: Column(
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) => SizedBox.square(
-                dimension: math.min(constraints.maxWidth, 370),
-                child: CycleRing(data: data),
-              ),
-            ),
-            const SizedBox(height: CycleCareSpacing.lg),
-            const _RingLegend(),
-          ],
         ),
-      );
-}
+        IconButton(
+          tooltip: 'Buka akun dan pengaturan',
+          onPressed: () => context.go('/settings'),
+          icon: const Icon(Icons.account_circle_outlined),
+        ),
+      ],
+    );
+  }
 
-class _RingLegend extends StatelessWidget {
-  const _RingLegend();
-
-  @override
-  Widget build(BuildContext context) => const Wrap(
-        alignment: WrapAlignment.center,
-        spacing: CycleCareSpacing.md,
-        runSpacing: CycleCareSpacing.xs,
-        children: [
-          _LegendItem(color: CycleCareColors.period, label: 'Period'),
-          _LegendItem(color: CycleCareColors.fertileStrong, label: 'Masa subur'),
-          _LegendItem(color: CycleCareColors.ovulation, label: 'Ovulasi'),
-          _LegendItem(color: CycleCareColors.prediction, label: 'Perkiraan'),
-        ],
-      );
-}
-
-class _LegendItem extends StatelessWidget {
-  const _LegendItem({required this.color, required this.label});
-
-  final Color color;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) => Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  _HeaderStatus _syncChip(SyncGateStatus status) => switch (status) {
+        SyncGateStatus.ready => const _HeaderStatus(
+            label: 'Tersinkron',
+            icon: Icons.cloud_done_outlined,
+            tone: CycleCareStatusTone.success,
           ),
-          const SizedBox(width: 6),
-          Text(label, style: Theme.of(context).textTheme.labelMedium),
-        ],
-      );
+        SyncGateStatus.synchronizing => const _HeaderStatus(
+            label: 'Menyinkronkan',
+            icon: Icons.sync_rounded,
+            tone: CycleCareStatusTone.info,
+          ),
+        SyncGateStatus.offlineReady => const _HeaderStatus(
+            label: 'Offline',
+            icon: Icons.cloud_off_outlined,
+            tone: CycleCareStatusTone.warning,
+          ),
+        SyncGateStatus.failed => const _HeaderStatus(
+            label: 'Perlu sinkronisasi',
+            icon: Icons.sync_problem_rounded,
+            tone: CycleCareStatusTone.error,
+          ),
+        _ => const _HeaderStatus(
+            label: 'Tersimpan di perangkat',
+            icon: Icons.smartphone_rounded,
+            tone: CycleCareStatusTone.neutral,
+          ),
+      };
 }
 
-class _OverviewPanel extends StatelessWidget {
-  const _OverviewPanel({
+class _HeaderStatus {
+  const _HeaderStatus({
+    required this.label,
+    required this.icon,
+    required this.tone,
+  });
+
+  final String label;
+  final IconData icon;
+  final CycleCareStatusTone tone;
+}
+
+class _CycleHeroCard extends StatelessWidget {
+  const _CycleHeroCard({
     required this.records,
+    required this.prediction,
     required this.insights,
     required this.ongoing,
   });
 
   final List<PeriodRecord> records;
+  final CyclePrediction? prediction;
   final CycleInsights? insights;
   final PeriodRecord? ongoing;
 
@@ -333,65 +306,357 @@ class _OverviewPanel extends StatelessWidget {
   Widget build(BuildContext context) {
     final status = insights?.status;
     final currentCycleDay = status?.currentCycleDay;
-    return Column(
-      children: [
-        CycleCareCard(
-          color: CycleCareColors.periodSoft.withValues(alpha: 0.88),
-          child: Column(
+    final predictionRange = _predictionRange(prediction);
+    final empty = records.isEmpty;
+    final colors = context.cycleCareColors;
+
+    return CycleCareCard(
+      color: Theme.of(context).brightness == Brightness.dark
+          ? const Color(0xFF38232D)
+          : CycleCareColors.surface,
+      semanticLabel: _heroSemanticLabel(
+        status: status,
+        prediction: prediction,
+        empty: empty,
+      ),
+      padding: const EdgeInsets.all(CycleCareSpacing.xl),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
-                children: [
-                  const Icon(Icons.water_drop_rounded,
-                      color: CycleCareColors.periodStrong),
-                  const SizedBox(width: CycleCareSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      ongoing == null ? 'Status siklus' : 'Period berlangsung',
-                      style: Theme.of(context).textTheme.titleMedium,
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hari ini',
+                      style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            color: colors.textSecondary,
+                          ),
+                    ),
+                    const SizedBox(height: CycleCareSpacing.xxs),
+                    Text(
+                      empty
+                          ? 'Mulai catatanmu'
+                          : currentCycleDay == null
+                              ? 'Data bertambah'
+                              : 'Hari $currentCycleDay',
+                      style: Theme.of(context)
+                          .textTheme
+                          .displayMedium
+                          ?.copyWith(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFFFFB2D0)
+                                    : CycleCareColors.periodStrong,
+                          ),
+                    ),
+                    const SizedBox(height: CycleCareSpacing.xs),
+                    Text(
+                      _cycleStatusLabel(status, insights?.fertility),
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+              ),
+              if (!empty)
+                CycleCareStatusChip(
+                  label: status?.isLate == true
+                      ? 'Lewat perkiraan'
+                      : ongoing == null
+                          ? 'Siklus aktif'
+                          : 'Period berlangsung',
+                  icon: status?.isLate == true
+                      ? Icons.schedule_rounded
+                      : ongoing == null
+                          ? Icons.favorite_outline_rounded
+                          : Icons.water_drop_rounded,
+                  tone: status?.isLate == true
+                      ? CycleCareStatusTone.warning
+                      : CycleCareStatusTone.neutral,
+                ),
+            ],
+          ),
+          if (status?.isLate == true) ...[
+            const SizedBox(height: CycleCareSpacing.md),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(CycleCareSpacing.sm),
+              decoration: BoxDecoration(
+                color: CycleCareColors.ovulationSoft.withValues(
+                  alpha: Theme.of(context).brightness == Brightness.dark
+                      ? 0.14
+                      : 0.72,
+                ),
+                borderRadius: BorderRadius.circular(CycleCareRadius.small),
+                border: Border.all(color: colors.divider),
+              ),
+              child: Text(
+                'Terlambat ${status!.lateDays} hari dari rentang perkiraan',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).brightness == Brightness.dark
+                          ? const Color(0xFFFFE082)
+                          : CycleCareColors.warning,
+                      fontWeight: FontWeight.w700,
+                    ),
+              ),
+            ),
+          ],
+          const SizedBox(height: CycleCareSpacing.lg),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(CycleCareSpacing.md),
+            decoration: BoxDecoration(
+              color: Theme.of(context)
+                  .colorScheme
+                  .primaryContainer
+                  .withValues(alpha: 0.52),
+              borderRadius: CycleCareRadius.mediumBorder,
+              border: Border.all(color: colors.divider),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Icon(
+                  Icons.calendar_month_outlined,
+                  color: Theme.of(context).colorScheme.onPrimaryContainer,
+                ),
+                const SizedBox(width: CycleCareSpacing.sm),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        empty
+                            ? 'Belum ada perkiraan period'
+                            : 'Perkiraan period berikutnya',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: CycleCareSpacing.xxs),
+                      Text(
+                        predictionRange ?? 'Catat beberapa siklus dahulu',
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      if (prediction?.ready == true) ...[
+                        const SizedBox(height: CycleCareSpacing.xxs),
+                        Text(
+                          'Berdasarkan ${prediction!.basedOnCycles} siklus • Keyakinan ${prediction!.confidence?.label.toLowerCase() ?? 'rendah'}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: CycleCareSpacing.lg),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () => context.push('/add-period', extra: ongoing),
+              icon: Icon(
+                  ongoing == null ? Icons.add_rounded : Icons.edit_rounded),
+              label: Text(ongoing == null ? 'Catat period' : 'Perbarui period'),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  String _heroSemanticLabel({
+    required CycleStatus? status,
+    required CyclePrediction? prediction,
+    required bool empty,
+  }) {
+    if (empty) {
+      return 'Belum ada catatan siklus. Catat period untuk memulai.';
+    }
+    return [
+      if (status?.currentCycleDay != null)
+        'Hari ke-${status!.currentCycleDay} dari siklus.',
+      if (status?.currentMenstruationDay != null)
+        'Hari ke-${status!.currentMenstruationDay} period.',
+      if (status?.isLate == true)
+        'Perkiraan period telah lewat ${status!.lateDays} hari.',
+      if (prediction?.windowStart != null && prediction?.windowEnd != null)
+        'Perkiraan period berikutnya ${DateOnly.display(prediction!.windowStart!)} sampai ${DateOnly.display(prediction.windowEnd!)}.',
+    ].join(' ');
+  }
+}
+
+class _CycleTimelineCard extends StatelessWidget {
+  const _CycleTimelineCard({
+    required this.data,
+    required this.showFertile,
+    required this.showOvulation,
+    required this.showPrediction,
+  });
+
+  final CycleRingData data;
+  final bool showFertile;
+  final bool showOvulation;
+  final bool showPrediction;
+
+  @override
+  Widget build(BuildContext context) => CycleCareCard(
+        padding: const EdgeInsets.all(CycleCareSpacing.lg),
+        semanticLabel: data.semanticLabel,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Siklus saat ini',
+                style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: CycleCareSpacing.md),
+            ExcludeSemantics(child: _CycleTimeline(data: data)),
+            const SizedBox(height: CycleCareSpacing.sm),
+            Wrap(
+              spacing: CycleCareSpacing.md,
+              runSpacing: CycleCareSpacing.xs,
+              children: [
+                const _TimelineLegend(
+                  color: CycleCareColors.period,
+                  label: 'Period tercatat',
+                  icon: Icons.water_drop_rounded,
+                ),
+                if (showFertile)
+                  const _TimelineLegend(
+                    color: CycleCareColors.fertileStrong,
+                    label: 'Masa subur',
+                    icon: Icons.blur_circular_rounded,
+                  ),
+                if (showOvulation)
+                  const _TimelineLegend(
+                    color: CycleCareColors.ovulation,
+                    label: 'Ovulasi',
+                    icon: Icons.sunny_snowing,
+                  ),
+                if (showPrediction)
+                  const _TimelineLegend(
+                    color: CycleCareColors.prediction,
+                    label: 'Period diperkirakan',
+                    icon: Icons.calendar_month_outlined,
+                  ),
+              ],
+            ),
+          ],
+        ),
+      );
+}
+
+class _CycleTimeline extends StatelessWidget {
+  const _CycleTimeline({required this.data});
+
+  final CycleRingData data;
+
+  @override
+  Widget build(BuildContext context) => SizedBox(
+        height: 34,
+        child: LayoutBuilder(
+          builder: (context, constraints) => Stack(
+            alignment: Alignment.centerLeft,
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                height: 14,
+                decoration: BoxDecoration(
+                  color: context.cycleCareColors.surfaceMuted,
+                  borderRadius: BorderRadius.circular(CycleCareRadius.pill),
+                  border: Border.all(color: context.cycleCareColors.divider),
+                ),
+              ),
+              for (final segment in data.segments)
+                Positioned(
+                  left: constraints.maxWidth * segment.start.clamp(0, 1),
+                  width: math.max(
+                    8,
+                    constraints.maxWidth *
+                        (segment.end - segment.start).clamp(0, 1),
+                  ),
+                  child: Container(
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: segment.color,
+                      borderRadius: BorderRadius.circular(CycleCareRadius.pill),
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: CycleCareSpacing.md),
-              Text(
-                status?.currentMenstruationDay != null
-                    ? 'Hari ke-${status!.currentMenstruationDay} period'
-                    : currentCycleDay == null
-                        ? 'Data belum cukup'
-                        : 'Hari ke-$currentCycleDay dari siklus',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: CycleCareSpacing.xs),
-              Text(
-                records.isEmpty
-                    ? 'Catat period pertama agar perkiraan menjadi lebih personal.'
-                    : 'Informasi ini diperbarui dari catatan yang tersimpan di perangkat.',
-              ),
+                ),
+              if (data.ovulationProgress != null)
+                Positioned(
+                  left: (constraints.maxWidth - 14) *
+                      data.ovulationProgress!.clamp(0, 1),
+                  child: Container(
+                    width: 14,
+                    height: 14,
+                    decoration: BoxDecoration(
+                      color: CycleCareColors.ovulation,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: context.cycleCareColors.textPrimary,
+                        width: 1.5,
+                      ),
+                    ),
+                  ),
+                ),
+              if (data.todayProgress != null)
+                Positioned(
+                  left: (constraints.maxWidth - 22) *
+                      data.todayProgress!.clamp(0, 1),
+                  child: Container(
+                    width: 22,
+                    height: 22,
+                    decoration: BoxDecoration(
+                      color: context.cycleCareColors.surface,
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: context.cycleCareColors.textPrimary,
+                        width: 2,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.today_rounded,
+                      size: 12,
+                      color: context.cycleCareColors.textPrimary,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
-        const SizedBox(height: CycleCareSpacing.md),
-        SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: () => context.push('/add-period', extra: ongoing),
-            icon: Icon(ongoing == null ? Icons.add_rounded : Icons.edit_rounded),
-            label: Text(ongoing == null ? 'Catat period' : 'Perbarui period'),
+      );
+}
+
+class _TimelineLegend extends StatelessWidget {
+  const _TimelineLegend({
+    required this.color,
+    required this.label,
+    required this.icon,
+  });
+
+  final Color color;
+  final String label;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) => Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 20,
+            height: 20,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: 0.18),
+              shape: BoxShape.circle,
+            ),
+            child: Icon(icon, size: 12, color: color),
           ),
-        ),
-        const SizedBox(height: CycleCareSpacing.sm),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton.icon(
-            onPressed: () => context.go('/history'),
-            icon: const Icon(Icons.history_rounded),
-            label: const Text('Lihat riwayat siklus'),
-          ),
-        ),
-      ],
-    );
-  }
+          const SizedBox(width: CycleCareSpacing.xxs),
+          Text(label, style: Theme.of(context).textTheme.labelMedium),
+        ],
+      );
 }
 
 class _PhaseCards extends StatelessWidget {
@@ -411,50 +676,78 @@ class _PhaseCards extends StatelessWidget {
   Widget build(BuildContext context) {
     final cards = <Widget>[];
     if (showFertile && fertility != null) {
-      cards.add(_PhaseCard(
-        icon: Icons.blur_circular_rounded,
-        color: CycleCareColors.fertileSoft,
-        iconColor: CycleCareColors.fertileStrong,
-        date:
-            '${DateOnly.display(fertility!.fertileWindowStart)} – ${DateOnly.display(fertility!.fertileWindowEnd)}',
-        title: 'Masa subur',
-        subtitle: 'Perkiraan · ${fertility!.confidence.label}',
-      ));
+      cards.add(
+        _PhaseCard(
+          icon: Icons.blur_circular_rounded,
+          color: Theme.of(context).colorScheme.secondaryContainer,
+          iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
+          eyebrow: 'Perkiraan',
+          date:
+              '${_compactDate(fertility!.fertileWindowStart)}–${_compactDate(fertility!.fertileWindowEnd)}',
+          title: 'Masa subur',
+          subtitle: 'Keyakinan ${fertility!.confidence.label.toLowerCase()}',
+        ),
+      );
     }
     if (showOvulation && fertility != null) {
-      cards.add(_PhaseCard(
-        icon: Icons.sunny_snowing,
-        color: CycleCareColors.ovulationSoft,
-        iconColor: CycleCareColors.warning,
-        date: DateOnly.display(fertility!.ovulationCenter),
-        title: 'Perkiraan ovulasi',
-        subtitle: 'Rentang dapat berubah',
-      ));
+      cards.add(
+        _PhaseCard(
+          icon: Icons.sunny_snowing,
+          color: Theme.of(context).colorScheme.tertiaryContainer,
+          iconColor: Theme.of(context).colorScheme.onTertiaryContainer,
+          eyebrow: 'Perkiraan',
+          date: _compactDate(fertility!.ovulationCenter),
+          title: 'Perkiraan ovulasi',
+          subtitle: 'Rentang dapat berubah',
+        ),
+      );
     }
-    if (prediction?.predictedStart != null) {
-      cards.add(_PhaseCard(
-        icon: Icons.water_drop_outlined,
-        color: CycleCareColors.predictionSoft,
-        iconColor: CycleCareColors.periodStrong,
-        date: DateOnly.display(prediction!.predictedStart!),
-        title: 'Period berikutnya',
-        subtitle: 'Keyakinan ${prediction!.confidence?.label ?? 'rendah'}',
-      ));
+    if (prediction?.ready == true &&
+        prediction?.predictedStart != null &&
+        prediction?.windowStart != null &&
+        prediction?.windowEnd != null) {
+      final days = DateOnly.differenceInDays(
+        prediction!.predictedStart!,
+        DateTime.now(),
+      );
+      cards.add(
+        _PhaseCard(
+          icon: Icons.update_rounded,
+          color: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFF38232D)
+              : CycleCareColors.predictionSoft,
+          iconColor: Theme.of(context).brightness == Brightness.dark
+              ? const Color(0xFFFFB2D0)
+              : CycleCareColors.periodStrong,
+          eyebrow: 'Berikutnya',
+          date: _predictionRange(prediction)!,
+          title: 'Period berikutnya',
+          subtitle: days >= 0
+              ? 'Sekitar $days hari lagi'
+              : 'Rentang perkiraan telah lewat',
+        ),
+      );
     }
+
     if (cards.isEmpty) {
       return CycleCareCard(
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Icon(Icons.auto_graph_rounded,
-                color: CycleCareColors.periodStrong),
+            Icon(
+              Icons.auto_graph_rounded,
+              color: Theme.of(context).colorScheme.primary,
+            ),
             const SizedBox(width: CycleCareSpacing.md),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Data belum cukup',
-                      style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 4),
+                  Text(
+                    'Data belum cukup',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: CycleCareSpacing.xxs),
                   const Text(
                     'Catat beberapa siklus agar perkiraan menjadi lebih personal.',
                   ),
@@ -465,7 +758,8 @@ class _PhaseCards extends StatelessWidget {
         ),
       );
     }
-    final cardsLayout = LayoutBuilder(
+
+    return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 900
             ? 3
@@ -478,20 +772,10 @@ class _PhaseCards extends StatelessWidget {
         return Wrap(
           spacing: CycleCareSpacing.md,
           runSpacing: CycleCareSpacing.md,
-          children: cards.map((card) => SizedBox(width: width, child: card)).toList(),
+          children:
+              cards.map((card) => SizedBox(width: width, child: card)).toList(),
         );
       },
-    );
-    if (!showFertile || fertility == null) return cardsLayout;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        cardsLayout,
-        const SizedBox(height: CycleCareSpacing.sm),
-        const Text(
-          'Perkiraan masa subur tidak boleh digunakan sebagai metode kontrasepsi.',
-        ),
-      ],
     );
   }
 }
@@ -501,6 +785,7 @@ class _PhaseCard extends StatelessWidget {
     required this.icon,
     required this.color,
     required this.iconColor,
+    required this.eyebrow,
     required this.date,
     required this.title,
     required this.subtitle,
@@ -509,6 +794,7 @@ class _PhaseCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final Color iconColor;
+  final String eyebrow;
   final String date;
   final String title;
   final String subtitle;
@@ -522,305 +808,229 @@ class _PhaseCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(icon, color: iconColor),
-                const Spacer(),
-                const Icon(Icons.arrow_outward_rounded, size: 18),
+                Icon(icon, size: 20, color: iconColor),
+                const SizedBox(width: CycleCareSpacing.xs),
+                Expanded(
+                  child: Text(
+                    eyebrow,
+                    style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                          color: iconColor,
+                        ),
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: CycleCareSpacing.lg),
             Text(date, style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 3),
+            const SizedBox(height: CycleCareSpacing.xxs),
             Text(title, style: Theme.of(context).textTheme.bodyLarge),
-            const SizedBox(height: 2),
+            const SizedBox(height: CycleCareSpacing.xxs),
             Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
           ],
         ),
       );
 }
 
-class _TodayCard extends StatelessWidget {
-  const _TodayCard({required this.insights, required this.ringData});
+class _RecentCyclesCard extends StatelessWidget {
+  const _RecentCyclesCard({required this.records, required this.statistics});
 
-  final CycleInsights? insights;
-  final CycleRingData ringData;
+  final List<PeriodRecord> records;
+  final CycleStatistics? statistics;
 
   @override
   Widget build(BuildContext context) {
-    final status = insights?.status;
-    final title = status?.currentCycleDay == null
-        ? 'Hari ini'
-        : 'Hari ini — Hari ke-${status!.currentCycleDay}';
-    final subtitle = status?.currentMenstruationDay != null
-        ? 'Period sedang berlangsung'
-        : status?.isLate == true
-            ? 'Perkiraan period telah lewat'
-            : insights?.fertility != null
-                ? 'Perkiraan fase siklus berdasarkan catatanmu'
-                : 'Data belum cukup untuk membuat perkiraan lengkap';
+    final recent = [...records]
+      ..sort((first, second) => first.startDate.compareTo(second.startDate));
+    final visible =
+        recent.length > 3 ? recent.sublist(recent.length - 3) : recent;
+    final average = statistics?.averageCycleLength;
+    final summary = average == null
+        ? 'Catat siklus berikutnya untuk melihat pola pribadi.'
+        : 'Rata-rata siklusmu ${average.toStringAsFixed(1)} hari. Pola saat ini ${statistics!.pattern.label.toLowerCase()}.';
+
     return CycleCareCard(
+      semanticLabel: 'Ringkasan ${visible.length} siklus terbaru. $summary',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 5),
-          Text(subtitle),
-          const SizedBox(height: CycleCareSpacing.lg),
-          _CycleTimeline(data: ringData),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  visible.isEmpty
+                      ? 'Ringkasan siklus'
+                      : 'Ringkasan ${visible.length} siklus',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              TextButton(
+                onPressed: () => context.push('/statistics'),
+                child: const Text('Lihat statistik'),
+              ),
+            ],
+          ),
+          const SizedBox(height: CycleCareSpacing.md),
+          if (visible.isEmpty)
+            Text(summary)
+          else
+            ExcludeSemantics(
+              child: SizedBox(
+                height: 116,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    for (final record in visible)
+                      Expanded(child: _CycleBar(record: record)),
+                  ],
+                ),
+              ),
+            ),
+          const SizedBox(height: CycleCareSpacing.md),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(CycleCareSpacing.sm),
+            decoration: BoxDecoration(
+              color: context.cycleCareColors.backgroundBlue,
+              borderRadius: CycleCareRadius.mediumBorder,
+              border: Border.all(color: context.cycleCareColors.divider),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.info_outline_rounded,
+                  size: 20,
+                  color: CycleCareColors.fertileStrong,
+                ),
+                const SizedBox(width: CycleCareSpacing.sm),
+                Expanded(
+                  child: Text(
+                    summary,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
   }
 }
 
-class _CycleTimeline extends StatelessWidget {
-  const _CycleTimeline({required this.data});
+class _CycleBar extends StatelessWidget {
+  const _CycleBar({required this.record});
 
-  final CycleRingData data;
-
-  @override
-  Widget build(BuildContext context) => Semantics(
-        label: data.semanticLabel,
-        child: ExcludeSemantics(
-          child: SizedBox(
-            height: 24,
-            child: LayoutBuilder(
-              builder: (context, constraints) => Stack(
-                alignment: Alignment.centerLeft,
-                children: [
-                  Container(
-                    height: 10,
-                    decoration: BoxDecoration(
-                      color: CycleCareColors.divider,
-                      borderRadius: BorderRadius.circular(CycleCareRadius.pill),
-                    ),
-                  ),
-                  for (final segment in data.segments)
-                    Positioned(
-                      left: constraints.maxWidth * segment.start.clamp(0, 1),
-                      width: constraints.maxWidth *
-                          (segment.end - segment.start).clamp(0, 1),
-                      child: Container(
-                        height: 10,
-                        decoration: BoxDecoration(
-                          color: segment.color,
-                          borderRadius:
-                              BorderRadius.circular(CycleCareRadius.pill),
-                        ),
-                      ),
-                    ),
-                  if (data.todayProgress != null)
-                    Positioned(
-                      left: (constraints.maxWidth - 18) *
-                          data.todayProgress!.clamp(0, 1),
-                      child: Container(
-                        width: 18,
-                        height: 18,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(
-                            color: CycleCareColors.textPrimary,
-                            width: 2,
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      );
-}
-
-class _LateCard extends StatelessWidget {
-  const _LateCard({required this.days});
-
-  final int days;
-
-  @override
-  Widget build(BuildContext context) => CycleCareCard(
-        color: CycleCareColors.ovulationSoft.withValues(alpha: 0.76),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.info_outline_rounded,
-                color: CycleCareColors.warning),
-            const SizedBox(width: CycleCareSpacing.md),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Terlambat $days hari dari rentang perkiraan',
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  const SizedBox(height: 4),
-                  const Text(
-                    'Perubahan siklus dapat terjadi karena banyak faktor. CycleCare tidak dapat menentukan penyebabnya.',
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      );
-}
-
-class _InsightCards extends StatelessWidget {
-  const _InsightCards({required this.statistics, required this.records});
-
-  final CycleStatistics? statistics;
-  final List<PeriodRecord> records;
+  final PeriodRecord record;
 
   @override
   Widget build(BuildContext context) {
-    final completed = records.where((record) => record.endDate != null).toList();
-    final latest = completed.isEmpty ? null : completed.last;
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final wide = constraints.maxWidth >= 680;
-        final cards = [
-          CycleCareCard(
-            onTap: () => context.push('/statistics'),
-            semanticLabel: 'Buka statistik pribadi',
-            child: Row(
-              children: [
-                const _InsightIcon(
-                  icon: Icons.insights_rounded,
-                  color: CycleCareColors.fertileSoft,
-                ),
-                const SizedBox(width: CycleCareSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        statistics?.pattern.label ?? 'Data belum cukup',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        statistics?.averageCycleLength == null
-                            ? 'Statistik pribadi sedang disiapkan.'
-                            : 'Rata-rata siklus ${_number(statistics!.averageCycleLength)} hari',
-                      ),
-                    ],
-                  ),
-                ),
-                const Icon(Icons.chevron_right_rounded),
-              ],
+    final cycleLength = record.cycleLengthDays ?? 28;
+    final periodDuration = record.periodDurationDays ?? 0;
+    final barHeight = (44 + (cycleLength.clamp(20, 40) - 20) * 2.1).toDouble();
+    final flowHeight = periodDuration == 0
+        ? 4.0
+        : (barHeight * periodDuration / cycleLength).clamp(8.0, 28.0);
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Container(
+          width: 34,
+          height: barHeight,
+          alignment: Alignment.bottomCenter,
+          decoration: BoxDecoration(
+            color: context.cycleCareColors.surfaceMuted,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(CycleCareRadius.small),
+            ),
+            border: Border.all(color: context.cycleCareColors.divider),
+          ),
+          child: Container(
+            width: double.infinity,
+            height: flowHeight,
+            decoration: const BoxDecoration(
+              color: CycleCareColors.period,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(4)),
             ),
           ),
-          CycleCareCard(
-            onTap: latest == null
-                ? null
-                : () => context.push('/summary/${latest.id}'),
-            semanticLabel: latest == null ? null : 'Buka ringkasan period terakhir',
-            child: Row(
-              children: [
-                const _InsightIcon(
-                  icon: Icons.summarize_outlined,
-                  color: CycleCareColors.predictionSoft,
-                ),
-                const SizedBox(width: CycleCareSpacing.md),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Period terakhir',
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        latest == null
-                            ? 'Belum ada period selesai.'
-                            : '${DateOnly.display(latest.startDate)} · ${latest.periodDurationDays ?? '-'} hari',
-                      ),
-                    ],
-                  ),
-                ),
-                if (latest != null) const Icon(Icons.chevron_right_rounded),
-              ],
-            ),
-          ),
-        ];
-        if (wide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(child: cards.first),
-              const SizedBox(width: CycleCareSpacing.md),
-              Expanded(child: cards.last),
-            ],
-          );
-        }
-        return Column(
-          children: [
-            cards.first,
-            const SizedBox(height: CycleCareSpacing.md),
-            cards.last,
-          ],
-        );
-      },
+        ),
+        const SizedBox(height: CycleCareSpacing.xs),
+        Text(
+          DateFormat('MMM', 'id_ID').format(record.startDate),
+          style: Theme.of(context).textTheme.labelMedium,
+        ),
+      ],
     );
   }
 }
 
-class _InsightIcon extends StatelessWidget {
-  const _InsightIcon({required this.icon, required this.color});
-
-  final IconData icon;
-  final Color color;
+class _FertilitySafetyNote extends StatelessWidget {
+  const _FertilitySafetyNote();
 
   @override
-  Widget build(BuildContext context) => Container(
-        width: 48,
-        height: 48,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
-        child: Icon(icon, color: CycleCareColors.textPrimary),
+  Widget build(BuildContext context) => Semantics(
+        container: true,
+        label:
+            'Perkiraan masa subur tidak ditujukan sebagai metode kontrasepsi.',
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(
+              Icons.shield_outlined,
+              size: 18,
+              color: context.cycleCareColors.textSecondary,
+            ),
+            const SizedBox(width: CycleCareSpacing.xs),
+            Expanded(
+              child: Text(
+                'Perkiraan masa subur tidak ditujukan sebagai metode kontrasepsi.',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ),
+          ],
+        ),
       );
 }
 
-CycleRingData _buildRingData({
+CycleRingData _buildTimelineData({
   required List<PeriodRecord> records,
   required CyclePrediction? prediction,
   required CycleInsights? insights,
   required bool showFertile,
   required bool showOvulation,
 }) {
+  final latest = records.isEmpty ? null : records.first;
   final status = insights?.status;
-  final statistics = insights?.statistics;
-  final latest = records.isEmpty ? null : records.last;
-  final cycleLength = prediction?.baselineCycleDays ??
-      statistics?.latestCycleLength ??
-      statistics?.averageCycleLength?.round();
   final cycleStart = latest?.startDate;
+  final average = insights?.statistics.averageCycleLength;
+  final cycleLength = prediction?.baselineCycleDays ??
+      latest?.cycleLengthDays ??
+      average?.round() ??
+      28;
   final segments = <CycleRingSegment>[];
 
   double? fractionForDay(int? day, {bool end = false}) {
-    if (day == null || cycleLength == null || cycleLength <= 0) return null;
+    if (day == null || cycleLength <= 0) return null;
     final value = end ? day / cycleLength : (day - 1) / cycleLength;
     return value.clamp(0.0, 1.0);
   }
 
   int? dayForDate(DateTime? date) {
     if (date == null || cycleStart == null) return null;
-    return DateUtils.dateOnly(date)
-            .difference(DateUtils.dateOnly(cycleStart))
-            .inDays +
-        1;
+    return DateOnly.differenceInDays(date, cycleStart) + 1;
   }
 
-  final periodDays = latest?.periodDurationDays ?? status?.currentMenstruationDay;
+  final periodDays =
+      latest?.periodDurationDays ?? status?.currentMenstruationDay;
   final periodEnd = fractionForDay(periodDays, end: true);
   if (periodEnd != null) {
-    segments.add(CycleRingSegment(
-      start: 0,
-      end: periodEnd,
-      color: CycleCareColors.period,
-    ));
+    segments.add(
+      CycleRingSegment(
+        start: 0,
+        end: periodEnd,
+        color: CycleCareColors.period,
+      ),
+    );
   }
 
   final fertility = insights?.fertility;
@@ -830,89 +1040,95 @@ CycleRingData _buildRingData({
       dayForDate(fertility.fertileWindowEnd),
       end: true,
     );
-    if (start != null && end != null) {
-      segments.add(CycleRingSegment(
-        start: start,
-        end: end,
-        color: CycleCareColors.fertileStrong,
-      ));
+    if (start != null && end != null && end > start) {
+      segments.add(
+        CycleRingSegment(
+          start: start,
+          end: end,
+          color: CycleCareColors.fertileStrong,
+        ),
+      );
     }
   }
 
   if (prediction?.windowStart != null && prediction?.windowEnd != null) {
     final start = fractionForDay(dayForDate(prediction!.windowStart));
-    final end = fractionForDay(dayForDate(prediction.windowEnd), end: true);
-    if (start != null && end != null) {
-      segments.add(CycleRingSegment(
-        start: start,
-        end: end,
-        color: CycleCareColors.prediction,
-      ));
+    final end = fractionForDay(
+      dayForDate(prediction.windowEnd),
+      end: true,
+    );
+    if (start != null && end != null && end > start) {
+      segments.add(
+        CycleRingSegment(
+          start: start,
+          end: end,
+          color: CycleCareColors.prediction,
+        ),
+      );
     }
   }
-
-  final todayProgress = fractionForDay(status?.currentCycleDay);
-  final ovulationProgress = showOvulation
-      ? fractionForDay(dayForDate(fertility?.ovulationCenter))
-      : null;
-
-  final ongoing = latest?.endDate == null && latest != null;
-  final late = status?.isLate == true;
-  final now = DateUtils.dateOnly(DateTime.now());
-  final predictedStart = prediction?.predictedStart == null
-      ? null
-      : DateUtils.dateOnly(prediction!.predictedStart!);
-  final daysUntilPrediction = predictedStart?.difference(now).inDays;
-
-  final title = ongoing
-      ? 'Hari ke-${status?.currentMenstruationDay ?? 1}'
-      : late
-          ? 'Terlambat ${status!.lateDays} hari'
-          : daysUntilPrediction != null && daysUntilPrediction >= 0
-              ? '$daysUntilPrediction hari lagi'
-              : status?.currentCycleDay != null
-                  ? 'Hari ke-${status!.currentCycleDay}'
-                  : 'Data belum cukup';
-  final subtitle = ongoing
-      ? 'Period berlangsung'
-      : late
-          ? 'Siklus dapat berubah'
-          : daysUntilPrediction != null && daysUntilPrediction >= 0
-              ? 'Perkiraan period berikutnya'
-              : status?.currentCycleDay != null
-                  ? 'dari siklusmu'
-                  : 'Catat siklus berikutnya';
 
   final semantics = <String>[
     if (status?.currentCycleDay != null)
       'Hari ke-${status!.currentCycleDay} dari siklus.',
-    if (status?.currentMenstruationDay != null)
-      'Hari ke-${status!.currentMenstruationDay} period.',
-    if (late) 'Perkiraan period telah lewat ${status!.lateDays} hari.',
-    if (prediction?.predictedStart != null)
-      'Perkiraan period berikutnya ${DateOnly.display(prediction!.predictedStart!)}.',
+    if (periodEnd != null) 'Period tercatat ditampilkan pada awal siklus.',
     if (showFertile && fertility != null)
       'Masa subur diperkirakan ${DateOnly.display(fertility.fertileWindowStart)} sampai ${DateOnly.display(fertility.fertileWindowEnd)}.',
     if (showOvulation && fertility != null)
       'Ovulasi diperkirakan ${DateOnly.display(fertility.ovulationCenter)}.',
-    if (status?.currentCycleDay == null)
-      'Data belum cukup untuk menampilkan siklus lengkap.',
+    if (prediction?.windowStart != null && prediction?.windowEnd != null)
+      'Period berikutnya diperkirakan ${DateOnly.display(prediction!.windowStart!)} sampai ${DateOnly.display(prediction.windowEnd!)}.',
   ].join(' ');
 
   return CycleRingData(
-    title: title,
-    subtitle: subtitle,
-    semanticLabel: semantics,
-    todayProgress: todayProgress,
-    ovulationProgress: ovulationProgress,
+    title: status?.currentCycleDay == null
+        ? 'Data belum cukup'
+        : 'Hari ke-${status!.currentCycleDay}',
+    subtitle: 'Siklus saat ini',
+    semanticLabel: semantics.isEmpty
+        ? 'Data belum cukup untuk menampilkan garis waktu siklus.'
+        : semantics,
+    todayProgress: fractionForDay(status?.currentCycleDay),
+    ovulationProgress: showOvulation
+        ? fractionForDay(dayForDate(fertility?.ovulationCenter))
+        : null,
     segments: segments,
-    centerIcon: ongoing
-        ? Icons.water_drop_rounded
-        : late
-            ? Icons.schedule_rounded
-            : Icons.favorite_rounded,
   );
 }
 
-String _number(double? value) =>
-    value == null ? 'Belum ada' : value.toStringAsFixed(1);
+String _cycleStatusLabel(
+  CycleStatus? status,
+  FertilityEstimate? fertility,
+) {
+  if (status?.currentMenstruationDay != null) {
+    return 'Hari ke-${status!.currentMenstruationDay} period';
+  }
+  if (status?.isLate == true) {
+    return 'Perkiraan period telah lewat';
+  }
+  final today = DateOnly.normalize(DateTime.now());
+  if (fertility != null) {
+    final fertileStart = DateOnly.normalize(fertility.fertileWindowStart);
+    final fertileEnd = DateOnly.normalize(fertility.fertileWindowEnd);
+    if (!today.isBefore(fertileStart) && !today.isAfter(fertileEnd)) {
+      return 'Dalam perkiraan masa subur';
+    }
+    if (today.isAfter(DateOnly.normalize(fertility.latestOvulation))) {
+      return 'Fase setelah perkiraan ovulasi';
+    }
+  }
+  if (status?.currentCycleDay != null) return 'Siklus sedang berjalan';
+  return 'Catat period pertama untuk memulai';
+}
+
+String? _predictionRange(CyclePrediction? prediction) {
+  if (prediction?.ready != true ||
+      prediction?.windowStart == null ||
+      prediction?.windowEnd == null) {
+    return null;
+  }
+  return '${_compactDate(prediction!.windowStart!)}–${_compactDate(prediction.windowEnd!)}';
+}
+
+String _compactDate(DateTime date) =>
+    DateFormat('d MMM', 'id_ID').format(DateOnly.normalize(date));

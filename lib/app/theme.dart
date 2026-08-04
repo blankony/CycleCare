@@ -6,35 +6,89 @@ import 'design/cycle_care_design.dart';
 class CycleCareTheme {
   const CycleCareTheme._();
 
-  static ThemeData light() {
-    const scheme = ColorScheme.light(
+  static ThemeData light() => _build(
+        brightness: Brightness.light,
+        semanticColors: CycleCareSemanticColors.light,
+      );
+
+  static ThemeData dark() => _build(
+        brightness: Brightness.dark,
+        semanticColors: CycleCareSemanticColors.dark,
+      );
+
+  static ThemeData _build({
+    required Brightness brightness,
+    required CycleCareSemanticColors semanticColors,
+  }) {
+    final isDark = brightness == Brightness.dark;
+    final scheme = ColorScheme(
+      brightness: brightness,
       primary: CycleCareColors.period,
       onPrimary: Colors.white,
-      primaryContainer: CycleCareColors.periodSoft,
-      onPrimaryContainer: CycleCareColors.periodStrong,
-      secondary: Color(0xFF6A5ACD),
+      primaryContainer:
+          isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+      onPrimaryContainer:
+          isDark ? const Color(0xFFFFD8E8) : CycleCareColors.periodStrong,
+      secondary: CycleCareColors.fertileStrong,
       onSecondary: Colors.white,
-      secondaryContainer: CycleCareColors.fertileSoft,
-      onSecondaryContainer: Color(0xFF28356F),
+      secondaryContainer:
+          isDark ? const Color(0xFF2D3867) : CycleCareColors.fertileSoft,
+      onSecondaryContainer:
+          isDark ? const Color(0xFFDDE4FF) : const Color(0xFF28356F),
       tertiary: CycleCareColors.warning,
       onTertiary: Colors.white,
-      tertiaryContainer: CycleCareColors.ovulationSoft,
-      onTertiaryContainer: Color(0xFF3A3000),
+      tertiaryContainer:
+          isDark ? const Color(0xFF4A3F00) : CycleCareColors.ovulationSoft,
+      onTertiaryContainer:
+          isDark ? const Color(0xFFFFF1A8) : const Color(0xFF3A3000),
       error: CycleCareColors.error,
       onError: Colors.white,
-      surface: CycleCareColors.surface,
-      onSurface: CycleCareColors.textPrimary,
-      outline: CycleCareColors.divider,
-      outlineVariant: Color(0xFFF6EDF1),
+      errorContainer:
+          isDark ? const Color(0xFF5F2020) : const Color(0xFFFFDAD6),
+      onErrorContainer:
+          isDark ? const Color(0xFFFFDAD6) : const Color(0xFF410002),
+      surface: semanticColors.surface,
+      onSurface: semanticColors.textPrimary,
+      surfaceContainerHighest: semanticColors.surfaceMuted,
+      onSurfaceVariant: semanticColors.textSecondary,
+      outline: semanticColors.divider,
+      outlineVariant: semanticColors.divider,
+      shadow: Colors.black,
+      scrim: Colors.black,
+      inverseSurface:
+          isDark ? CycleCareColors.surface : CycleCareColors.textPrimary,
+      onInverseSurface:
+          isDark ? CycleCareColors.textPrimary : CycleCareColors.surface,
+      inversePrimary:
+          isDark ? CycleCareColors.periodStrong : CycleCareColors.prediction,
+      surfaceTint: Colors.transparent,
     );
     final base = ThemeData(
       useMaterial3: true,
+      brightness: brightness,
       colorScheme: scheme,
-      scaffoldBackgroundColor: CycleCareColors.background,
+      scaffoldBackgroundColor: semanticColors.background,
       splashFactory: InkSparkle.splashFactory,
       visualDensity: VisualDensity.standard,
+      extensions: [semanticColors],
     );
-    final textTheme = CycleCareTypography.textTheme(base.textTheme);
+    final textTheme = CycleCareTypography.textTheme(
+      base.textTheme,
+      textPrimary: semanticColors.textPrimary,
+      textSecondary: semanticColors.textSecondary,
+    );
+    final overlayStyle = isDark
+        ? SystemUiOverlayStyle.light.copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: semanticColors.background,
+            systemNavigationBarDividerColor: Colors.transparent,
+          )
+        : SystemUiOverlayStyle.dark.copyWith(
+            statusBarColor: Colors.transparent,
+            systemNavigationBarColor: semanticColors.background,
+            systemNavigationBarDividerColor: Colors.transparent,
+          );
+
     return base.copyWith(
       textTheme: textTheme,
       primaryTextTheme: textTheme,
@@ -43,29 +97,23 @@ class CycleCareTheme {
         scrolledUnderElevation: 0,
         centerTitle: false,
         backgroundColor: Colors.transparent,
-        foregroundColor: CycleCareColors.textPrimary,
+        foregroundColor: semanticColors.textPrimary,
         surfaceTintColor: Colors.transparent,
         titleTextStyle: textTheme.titleLarge,
-        systemOverlayStyle: const SystemUiOverlayStyle(
-          statusBarColor: Colors.transparent,
-          statusBarIconBrightness: Brightness.dark,
-          statusBarBrightness: Brightness.light,
-          systemNavigationBarColor: CycleCareColors.background,
-          systemNavigationBarDividerColor: Colors.transparent,
-          systemNavigationBarIconBrightness: Brightness.dark,
-        ),
+        systemOverlayStyle: overlayStyle,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: Colors.white.withValues(alpha: 0.92),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        fillColor: semanticColors.surfaceTranslucent,
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: CycleCareRadius.mediumBorder,
-          borderSide: const BorderSide(color: CycleCareColors.divider),
+          borderSide: BorderSide(color: semanticColors.divider),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: CycleCareRadius.mediumBorder,
-          borderSide: const BorderSide(color: CycleCareColors.divider),
+          borderSide: BorderSide(color: semanticColors.divider),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: CycleCareRadius.mediumBorder,
@@ -80,68 +128,109 @@ class CycleCareTheme {
           borderSide: const BorderSide(color: CycleCareColors.error, width: 2),
         ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         elevation: 0,
         margin: EdgeInsets.zero,
-        color: CycleCareColors.surface,
+        color: semanticColors.surface,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: CycleCareRadius.cardBorder),
+        shape: RoundedRectangleBorder(
+          borderRadius: CycleCareRadius.cardBorder,
+          side: BorderSide(color: semanticColors.divider),
+        ),
       ),
       navigationBarTheme: NavigationBarThemeData(
         height: 72,
         elevation: 0,
-        backgroundColor: Colors.transparent,
+        backgroundColor: semanticColors.surface,
         surfaceTintColor: Colors.transparent,
-        indicatorColor: CycleCareColors.periodSoft,
+        indicatorColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
         indicatorShape: const StadiumBorder(),
-        iconTheme: WidgetStateProperty.resolveWith((states) => IconThemeData(
-              size: 24,
-              color: states.contains(WidgetState.selected)
-                  ? CycleCareColors.periodStrong
-                  : CycleCareColors.textSecondary,
-            )),
-        labelTextStyle: WidgetStateProperty.resolveWith((states) => TextStyle(
-              fontSize: 12,
-              fontWeight: states.contains(WidgetState.selected)
-                  ? FontWeight.w700
-                  : FontWeight.w600,
-              color: states.contains(WidgetState.selected)
-                  ? CycleCareColors.periodStrong
-                  : CycleCareColors.textSecondary,
-            )),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            size: 24,
+            color: states.contains(WidgetState.selected)
+                ? (isDark
+                    ? const Color(0xFFFFB2D0)
+                    : CycleCareColors.periodStrong)
+                : semanticColors.textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w600,
+            color: states.contains(WidgetState.selected)
+                ? (isDark
+                    ? const Color(0xFFFFB2D0)
+                    : CycleCareColors.periodStrong)
+                : semanticColors.textSecondary,
+          ),
+        ),
       ),
       navigationRailTheme: NavigationRailThemeData(
-        backgroundColor: Colors.transparent,
-        indicatorColor: CycleCareColors.periodSoft,
-        selectedIconTheme: const IconThemeData(color: CycleCareColors.periodStrong),
-        unselectedIconTheme: const IconThemeData(color: CycleCareColors.textSecondary),
+        backgroundColor: semanticColors.surface,
+        indicatorColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        selectedIconTheme: IconThemeData(
+          color:
+              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+        ),
+        unselectedIconTheme: IconThemeData(color: semanticColors.textSecondary),
         selectedLabelTextStyle: textTheme.labelLarge?.copyWith(
-          color: CycleCareColors.periodStrong,
+          color:
+              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
         ),
         unselectedLabelTextStyle: textTheme.labelLarge?.copyWith(
-          color: CycleCareColors.textSecondary,
+          color: semanticColors.textSecondary,
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
-        style: FilledButton.styleFrom(
-          minimumSize: const Size(48, 52),
-          padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-          shape: RoundedRectangleBorder(borderRadius: CycleCareRadius.mediumBorder),
-          textStyle: textTheme.labelLarge,
+        style: ButtonStyle(
+          minimumSize: const WidgetStatePropertyAll(Size(48, 52)),
+          padding: const WidgetStatePropertyAll(
+            EdgeInsets.symmetric(horizontal: 22, vertical: 15),
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? semanticColors.surfaceMuted
+                : states.contains(WidgetState.pressed)
+                    ? CycleCareColors.periodStrong
+                    : CycleCareColors.period,
+          ),
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.disabled)
+                ? semanticColors.textSecondary
+                : Colors.white,
+          ),
+          shape: WidgetStatePropertyAll(
+            RoundedRectangleBorder(
+              borderRadius: CycleCareRadius.mediumBorder,
+            ),
+          ),
+          textStyle: WidgetStatePropertyAll(textTheme.labelLarge),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 52),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-          side: const BorderSide(color: CycleCareColors.divider),
-          shape: RoundedRectangleBorder(borderRadius: CycleCareRadius.mediumBorder),
+          foregroundColor:
+              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+          side: BorderSide(color: semanticColors.divider),
+          shape: RoundedRectangleBorder(
+            borderRadius: CycleCareRadius.mediumBorder,
+          ),
           textStyle: textTheme.labelLarge,
         ),
       ),
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
-          minimumSize: const Size(44, 44),
+          minimumSize: const Size(48, 48),
+          foregroundColor:
+              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(
               Radius.circular(CycleCareRadius.small),
@@ -153,57 +242,74 @@ class CycleCareTheme {
       iconButtonTheme: IconButtonThemeData(
         style: IconButton.styleFrom(
           minimumSize: const Size.square(48),
-          backgroundColor: Colors.white.withValues(alpha: 0.76),
-          foregroundColor: CycleCareColors.textPrimary,
+          backgroundColor: semanticColors.surfaceTranslucent,
+          foregroundColor: semanticColors.textPrimary,
           shape: const CircleBorder(),
         ),
       ),
       chipTheme: base.chipTheme.copyWith(
-        backgroundColor: CycleCareColors.surfaceMuted,
-        selectedColor: CycleCareColors.periodSoft,
-        side: BorderSide.none,
+        backgroundColor: semanticColors.surfaceMuted,
+        selectedColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        side: BorderSide(color: semanticColors.divider),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         labelStyle: textTheme.labelMedium,
       ),
-      dialogTheme: const DialogThemeData(
+      dialogTheme: DialogThemeData(
         elevation: 0,
-        backgroundColor: CycleCareColors.surface,
-        surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(borderRadius: CycleCareRadius.cardBorder),
-      ),
-      bottomSheetTheme: const BottomSheetThemeData(
-        elevation: 0,
-        modalElevation: 0,
-        backgroundColor: CycleCareColors.surface,
+        backgroundColor: semanticColors.surface,
         surfaceTintColor: Colors.transparent,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(CycleCareRadius.sheet)),
+          borderRadius: CycleCareRadius.cardBorder,
+          side: BorderSide(color: semanticColors.divider),
+        ),
+      ),
+      bottomSheetTheme: BottomSheetThemeData(
+        elevation: 0,
+        modalElevation: 0,
+        backgroundColor: semanticColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(CycleCareRadius.sheet),
+          ),
         ),
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
         elevation: 0,
-        backgroundColor: CycleCareColors.textPrimary,
-        contentTextStyle: textTheme.bodyMedium?.copyWith(color: Colors.white),
-        shape: RoundedRectangleBorder(borderRadius: CycleCareRadius.mediumBorder),
+        backgroundColor: scheme.inverseSurface,
+        contentTextStyle: textTheme.bodyMedium?.copyWith(
+          color: scheme.onInverseSurface,
+        ),
+        shape: RoundedRectangleBorder(
+          borderRadius: CycleCareRadius.mediumBorder,
+        ),
       ),
-      dividerTheme: const DividerThemeData(
-        color: CycleCareColors.divider,
+      dividerTheme: DividerThemeData(
+        color: semanticColors.divider,
         thickness: 1,
         space: 1,
       ),
-      progressIndicatorTheme: const ProgressIndicatorThemeData(
+      progressIndicatorTheme: ProgressIndicatorThemeData(
         color: CycleCareColors.period,
-        linearTrackColor: CycleCareColors.periodSoft,
-        circularTrackColor: CycleCareColors.periodSoft,
+        linearTrackColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        circularTrackColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
       ),
       datePickerTheme: DatePickerThemeData(
-        backgroundColor: CycleCareColors.surface,
+        backgroundColor: semanticColors.surface,
         surfaceTintColor: Colors.transparent,
-        shape: const RoundedRectangleBorder(borderRadius: CycleCareRadius.cardBorder),
-        headerBackgroundColor: CycleCareColors.periodSoft,
-        headerForegroundColor: CycleCareColors.periodStrong,
+        shape: RoundedRectangleBorder(
+          borderRadius: CycleCareRadius.cardBorder,
+          side: BorderSide(color: semanticColors.divider),
+        ),
+        headerBackgroundColor:
+            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        headerForegroundColor:
+            isDark ? const Color(0xFFFFD8E8) : CycleCareColors.periodStrong,
         dayOverlayColor: WidgetStatePropertyAll(
           CycleCareColors.period.withValues(alpha: 0.08),
         ),

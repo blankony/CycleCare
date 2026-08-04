@@ -49,6 +49,7 @@ macos/Pods/
 
 # Existing project-local metadata
 /AGENTS.md
+/DESIGN.md
 /TASK.md
 /TASK2.md
 /UI.md

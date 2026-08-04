@@ -14,6 +14,7 @@ import '../domain/entities/enums.dart';
 import '../domain/entities/period_day_log.dart';
 import '../domain/entities/period_record.dart';
 import '../domain/entities/prediction.dart';
+import '../domain/entities/sync_state.dart';
 import '../domain/entities/user_cycle_settings.dart';
 import '../domain/services/backup_service.dart';
 import '../domain/services/account_deletion_service.dart';
@@ -159,6 +160,10 @@ final syncControllerProvider = ChangeNotifierProvider<SyncController>((ref) {
   );
   ref.onDispose(controller.dispose);
   return controller;
+});
+
+final syncSnapshotProvider = Provider<SyncGateSnapshot>((ref) {
+  return ref.watch(syncControllerProvider).snapshot;
 });
 
 final activePeriodsProvider = StreamProvider<List<PeriodRecord>>((ref) {

@@ -9,26 +9,42 @@ class CycleCareBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => DecoratedBox(
-        decoration: const BoxDecoration(gradient: CycleCareColors.backgroundGradient),
+        decoration: BoxDecoration(
+          gradient: context.cycleCareColors.backgroundGradient,
+        ),
         child: CustomPaint(
-          painter: const _CycleCareBackgroundPainter(),
+          painter: _CycleCareBackgroundPainter(
+            brightness: Theme.of(context).brightness,
+          ),
           child: child,
         ),
       );
 }
 
 class _CycleCareBackgroundPainter extends CustomPainter {
-  const _CycleCareBackgroundPainter();
+  const _CycleCareBackgroundPainter({required this.brightness});
+
+  final Brightness brightness;
 
   @override
   void paint(Canvas canvas, Size size) {
+    final opacityScale = brightness == Brightness.dark ? 0.45 : 1.0;
     final shapes = [
-      (Offset(size.width * 0.08, size.height * 0.16), size.width * 0.32,
-          CycleCareColors.prediction.withValues(alpha: 0.10)),
-      (Offset(size.width * 0.92, size.height * 0.30), size.width * 0.36,
-          CycleCareColors.fertile.withValues(alpha: 0.12)),
-      (Offset(size.width * 0.20, size.height * 0.84), size.width * 0.26,
-          CycleCareColors.peach.withValues(alpha: 0.10)),
+      (
+        Offset(size.width * 0.08, size.height * 0.16),
+        size.width * 0.32,
+        CycleCareColors.prediction.withValues(alpha: 0.10 * opacityScale)
+      ),
+      (
+        Offset(size.width * 0.92, size.height * 0.30),
+        size.width * 0.36,
+        CycleCareColors.fertile.withValues(alpha: 0.12 * opacityScale)
+      ),
+      (
+        Offset(size.width * 0.20, size.height * 0.84),
+        size.width * 0.26,
+        CycleCareColors.peach.withValues(alpha: 0.10 * opacityScale)
+      ),
     ];
     for (final shape in shapes) {
       canvas.drawCircle(shape.$1, shape.$2, Paint()..color = shape.$3);
@@ -36,5 +52,6 @@ class _CycleCareBackgroundPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(covariant _CycleCareBackgroundPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _CycleCareBackgroundPainter oldDelegate) =>
+      oldDelegate.brightness != brightness;
 }

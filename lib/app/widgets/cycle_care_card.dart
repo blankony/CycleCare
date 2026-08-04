@@ -20,9 +20,13 @@ class CycleCareCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final colors = context.cycleCareColors;
     final content = Material(
-      color: color ?? Colors.white.withValues(alpha: 0.92),
-      borderRadius: CycleCareRadius.cardBorder,
+      color: color ?? colors.surfaceTranslucent,
+      shape: RoundedRectangleBorder(
+        borderRadius: CycleCareRadius.cardBorder,
+        side: BorderSide(color: colors.divider),
+      ),
       child: InkWell(
         onTap: onTap,
         borderRadius: CycleCareRadius.cardBorder,
@@ -33,19 +37,7 @@ class CycleCareCard extends StatelessWidget {
       container: true,
       button: onTap != null,
       label: semanticLabel,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          borderRadius: CycleCareRadius.cardBorder,
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x120F172A),
-              blurRadius: 24,
-              offset: Offset(0, 10),
-            ),
-          ],
-        ),
-        child: content,
-      ),
+      child: content,
     );
   }
 }

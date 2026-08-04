@@ -23,7 +23,8 @@ class CycleCareSectionHeader extends StatelessWidget {
                 Text(title, style: Theme.of(context).textTheme.titleLarge),
                 if (subtitle != null) ...[
                   const SizedBox(height: 4),
-                  Text(subtitle!, style: Theme.of(context).textTheme.bodyMedium),
+                  Text(subtitle!,
+                      style: Theme.of(context).textTheme.bodyMedium),
                 ],
               ],
             ),

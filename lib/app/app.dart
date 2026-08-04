@@ -42,6 +42,8 @@ class _CycleCareAppState extends ConsumerState<CycleCareApp>
         title: 'CycleCare',
         debugShowCheckedModeBanner: false,
         theme: CycleCareTheme.light(),
+        darkTheme: CycleCareTheme.dark(),
+        themeMode: ThemeMode.system,
         routerConfig: ref.watch(routerProvider),
       );
 }

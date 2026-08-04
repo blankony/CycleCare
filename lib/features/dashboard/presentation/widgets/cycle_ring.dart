@@ -271,7 +271,8 @@ class _CycleRingPainter extends CustomPainter {
       oldDelegate.data != data || oldDelegate.progress != progress;
 }
 
-bool _segmentsEqual(List<CycleRingSegment> first, List<CycleRingSegment> second) {
+bool _segmentsEqual(
+    List<CycleRingSegment> first, List<CycleRingSegment> second) {
   if (identical(first, second)) return true;
   if (first.length != second.length) return false;
   for (var index = 0; index < first.length; index++) {
