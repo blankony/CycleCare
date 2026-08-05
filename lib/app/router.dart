@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../features/app_lock/presentation/lock_page.dart';
 import '../features/auth/presentation/login_page.dart';
 import '../features/auth/presentation/register_page.dart';
+import '../features/backup/presentation/backup_page.dart';
 import '../features/calendar/presentation/calendar_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
 import '../features/history/presentation/history_page.dart';
@@ -22,6 +23,7 @@ import 'widgets.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final auth = ref.watch(authSessionProvider);
   final sync = ref.watch(syncControllerProvider);
+  final biometricEnabled = _biometricEnabled(ref);
 
   return GoRouter(
     initialLocation: '/session',
@@ -31,6 +33,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       hasUser: auth.user != null,
       syncStatus: sync.snapshot.status,
       location: state.matchedLocation,
+      biometricEnabled: biometricEnabled,
     ),
     routes: [
       GoRoute(path: '/session', builder: (_, __) => const SessionPage()),
@@ -45,6 +48,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/sync', builder: (_, __) => const SyncGatePage()),
       GoRoute(path: '/local-data', builder: (_, __) => const SyncGatePage()),
       GoRoute(path: '/lock', builder: (_, __) => const LockPage()),
+      GoRoute(path: '/backup', builder: (_, __) => const BackupPage()),
       GoRoute(
         path: '/add-period',
         builder: (context, state) => PeriodFormPage(record: state.extra),
@@ -84,11 +88,17 @@ final routerProvider = Provider<GoRouter>((ref) {
   );
 });
 
+bool _biometricEnabled(Ref ref) {
+  final settings = ref.watch(settingsProvider).valueOrNull;
+  return settings?['biometric_enabled'] == 'true';
+}
+
 String? resolveAppRedirect({
   required AuthSessionStatus authStatus,
   required bool hasUser,
   required SyncGateStatus syncStatus,
   required String location,
+  bool biometricEnabled = false,
 }) {
   if (authStatus == AuthSessionStatus.restoring) {
     return location == '/session' ? null : '/session';
@@ -104,10 +114,13 @@ String? resolveAppRedirect({
   final syncReady = syncStatus == SyncGateStatus.ready ||
       syncStatus == SyncGateStatus.offlineReady;
   if (!syncReady) return location == '/sync' ? null : '/sync';
-  if ({'/login', '/register', '/session', '/sync', '/local-data'}
-      .contains(location)) {
-    return '/dashboard';
+  final publicPath = {'/login', '/register', '/session', '/sync', '/local-data'}
+      .contains(location);
+  if (biometricEnabled && !publicPath && location != '/lock') {
+    return '/lock';
   }
+  if (publicPath) return '/dashboard';
+  if (biometricEnabled && location == '/lock') return null;
   return null;
 }
 
@@ -187,7 +200,7 @@ class AppShell extends StatelessWidget {
                 CycleCareSpacing.sm,
                 CycleCareSpacing.xs,
                 CycleCareSpacing.sm,
-                CycleCareSpacing.sm,
+                CycleCareSpacing.xs,
               ),
               child: DecoratedBox(
                 decoration: BoxDecoration(

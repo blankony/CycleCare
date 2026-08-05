@@ -8,6 +8,7 @@ import '../data/local/database.dart';
 import '../data/repositories/auth_repository.dart';
 import '../data/repositories/period_repository.dart';
 import '../data/repositories/period_day_log_repository.dart';
+import '../data/repositories/settings_repository.dart';
 import '../data/repositories/user_cycle_settings_repository.dart';
 import '../domain/entities/cycle_insights.dart';
 import '../domain/entities/enums.dart';
@@ -273,3 +274,7 @@ final settingsProvider = StreamProvider<Map<String, String?>>((ref) {
 final periodActionsProvider =
     AsyncNotifierProvider<PeriodActionsController, void>(
         PeriodActionsController.new);
+
+final settingsRepositoryProvider = Provider<SettingsRepository>((ref) {
+  return DriftSettingsRepository(ref.watch(databaseProvider));
+});
