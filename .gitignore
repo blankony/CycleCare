@@ -67,6 +67,7 @@ macos/Pods/
 /supabase/.temp/
 /.codex
 /.opencode
+/.agents
 /.env
 
 # JVM crash dumps
