@@ -60,6 +60,7 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
         : const <PeriodDayLogRecord>[];
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: CycleCareAppBar(
         title: editing ? 'Perbarui period' : 'Catat period',
       ),

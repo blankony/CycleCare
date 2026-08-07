@@ -12,6 +12,7 @@ class StatisticsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final statistics = ref.watch(cycleStatisticsProvider);
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Statistik pribadi'),
       body: CycleCareBackground(
         child: statistics.when(

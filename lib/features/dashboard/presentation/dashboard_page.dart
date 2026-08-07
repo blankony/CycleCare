@@ -41,10 +41,12 @@ class DashboardPage extends ConsumerWidget {
     });
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
       body: CycleCareBackground(
         child: SafeArea(
           bottom: false,
+          top: false,
           child: periods.when(
             loading: () => const CycleCareLoadingState(),
             error: (_, __) => CycleCareErrorState(

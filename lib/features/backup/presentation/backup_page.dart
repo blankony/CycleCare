@@ -14,6 +14,7 @@ class BackupPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final lastSync = ref.watch(syncSnapshotProvider).lastSuccessfulSyncAt;
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Backup & restore'),
       body: CycleCareBackground(
         child: LayoutBuilder(
