@@ -194,6 +194,8 @@ class _CalendarContent extends StatelessWidget {
                     showOvulation: showOvulation,
                   ),
                   const SizedBox(height: CycleCareSpacing.md),
+                  _QuickOngoingCalendarToggle(records: records),
+                  const SizedBox(height: CycleCareSpacing.md),
                   _SelectedDateCard(
                     selectedDay: selected,
                     records: selectedRecords,
@@ -815,6 +817,58 @@ class _DetailRow extends StatelessWidget {
           ),
         ],
       );
+}
+
+class _QuickOngoingCalendarToggle extends ConsumerWidget {
+  const _QuickOngoingCalendarToggle({required this.records});
+
+  final List<PeriodRecord> records;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final ongoing = records.where((r) => r.endDate == null).firstOrNull;
+    final busy = ref.watch(periodActionsProvider).isLoading;
+    if (ongoing != null) {
+      return SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: busy
+              ? null
+              : () async {
+                  try {
+                    await ref.read(periodActionsProvider.notifier).finish(ongoing.id, DateTime.now());
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text('Period diselesaikan hari ini.')),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                  }
+                },
+          icon: const Icon(Icons.stop_circle_outlined, size: 18),
+          label: const Text('Selesaikan period hari ini'),
+        ),
+      );
+    }
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: busy
+            ? null
+            : () async {
+                try {
+                  await ref.read(periodActionsProvider.notifier).create(startDate: DateTime.now());
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Period dimulai hari ini.')));
+                } catch (e) {
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+                }
+              },
+        icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+        label: const Text('Mulai period hari ini'),
+      ),
+    );
+  }
 }
 
 class _CalendarNotice extends StatelessWidget {

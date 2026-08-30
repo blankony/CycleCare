@@ -208,34 +208,36 @@ class PeriodFlowDayEditor extends StatelessWidget {
   final ValueChanged<MenstrualFlow?> onChanged;
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        container: true,
-        label: 'Flow ${DateOnly.display(date)}',
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    DateOnly.display(date),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Semantics(
+      container: true,
+      label: 'Flow ${DateOnly.display(date)}',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  DateOnly.display(date),
+                  style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (value != null)
-                  TextButton.icon(
-                    onPressed: () => onChanged(null),
-                    icon: const Icon(Icons.close_rounded, size: 18),
-                    label: const Text('Hapus flow'),
-                  ),
-              ],
-            ),
-            const SizedBox(height: CycleCareSpacing.xs),
-            Wrap(
-              spacing: CycleCareSpacing.xs,
-              runSpacing: CycleCareSpacing.xs,
+              ),
+              if (value != null)
+                TextButton.icon(
+                  onPressed: () => onChanged(null),
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: const Text('Hapus flow'),
+                ),
+            ],
+          ),
+          const SizedBox(height: CycleCareSpacing.xs),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
               children: [
-                for (final flow in MenstrualFlow.values)
+                for (final flow in MenstrualFlow.values) ...[
                   Semantics(
                     button: true,
                     selected: value == flow,
@@ -243,20 +245,26 @@ class PeriodFlowDayEditor extends StatelessWidget {
                     child: ChoiceChip(
                       selected: value == flow,
                       onSelected: (_) => onChanged(flow),
-                      avatar: Text(
-                        flow.indicator,
-                        style: const TextStyle(fontWeight: FontWeight.w800),
-                      ),
+                      avatar: Text(flow.indicator, style: const TextStyle(fontWeight: FontWeight.w800)),
                       label: Text(flow.label),
-                      materialTapTargetSize: MaterialTapTargetSize.padded,
-                      visualDensity: VisualDensity.standard,
+                      selectedColor: scheme.primaryContainer,
+                      labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
+                            fontWeight: value == flow ? FontWeight.w700 : FontWeight.w500,
+                          ),
+                      materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      visualDensity: VisualDensity.compact,
                     ),
                   ),
+                  if (flow != MenstrualFlow.values.last)
+                    const SizedBox(width: CycleCareSpacing.xs),
+                ],
               ],
             ),
-          ],
-        ),
-      );
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class PeriodValidationMessage extends StatelessWidget {

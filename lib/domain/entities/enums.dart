@@ -47,6 +47,15 @@ enum SyncOperation { upsert, delete }
 
 enum MenstrualFlow { spotting, light, medium, heavy }
 
+extension MenstrualFlowVisuals on MenstrualFlow {
+  String get indicator => switch (this) {
+        MenstrualFlow.spotting => '○',
+        MenstrualFlow.light => '◐',
+        MenstrualFlow.medium => '●',
+        MenstrualFlow.heavy => '⬢',
+      };
+}
+
 extension MenstrualFlowText on MenstrualFlow {
   String get value => name.toUpperCase();
 
@@ -55,13 +64,6 @@ extension MenstrualFlowText on MenstrualFlow {
         MenstrualFlow.light => 'Ringan',
         MenstrualFlow.medium => 'Sedang',
         MenstrualFlow.heavy => 'Deras',
-      };
-
-  String get indicator => switch (this) {
-        MenstrualFlow.spotting => 'B',
-        MenstrualFlow.light => 'R',
-        MenstrualFlow.medium => 'S',
-        MenstrualFlow.heavy => 'D',
       };
 
   static MenstrualFlow? fromValue(String? value) {

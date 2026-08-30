@@ -417,7 +417,9 @@ class _CycleHeroCard extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(height: CycleCareSpacing.lg),
+          const SizedBox(height: CycleCareSpacing.md),
+          _QuickOngoingToggle(ongoing: ongoing),
+          const SizedBox(height: CycleCareSpacing.sm),
           SizedBox(
             width: double.infinity,
             child: FilledButton.icon(
@@ -925,6 +927,63 @@ class _CycleBar extends StatelessWidget {
           style: Theme.of(context).textTheme.labelMedium,
         ),
       ],
+    );
+  }
+}
+
+class _QuickOngoingToggle extends ConsumerWidget {
+  const _QuickOngoingToggle({required this.ongoing});
+
+  final PeriodRecord? ongoing;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final busy = ref.watch(periodActionsProvider).isLoading;
+    if (ongoing != null) {
+      return OutlinedButton.icon(
+        onPressed: busy
+            ? null
+            : () async {
+                try {
+                  await ref.read(periodActionsProvider.notifier).finish(ongoing!.id, DateTime.now());
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Period diselesaikan hari ini.')),
+                    );
+                  }
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.toString())),
+                    );
+                  }
+                }
+              },
+        icon: const Icon(Icons.stop_circle_outlined, size: 18),
+        label: const Text('Selesaikan hari ini'),
+      );
+    }
+    return OutlinedButton.icon(
+      onPressed: busy
+          ? null
+          : () async {
+              try {
+                await ref.read(periodActionsProvider.notifier).create(startDate: DateTime.now());
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Period dimulai hari ini.')),
+                  );
+                }
+              } catch (e) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(e.toString())),
+                  );
+                }
+              }
+            },
+      icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
+      label: const Text('Mulai period hari ini'),
     );
   }
 }

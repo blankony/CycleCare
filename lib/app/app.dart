@@ -1,3 +1,4 @@
+import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -18,6 +19,15 @@ class _CycleCareAppState extends ConsumerState<CycleCareApp>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+    ref.listenManual(connectivityStateProvider, (_, next) {
+      final results = next.valueOrNull;
+      if (results == null || results.contains(ConnectivityResult.none)) return;
+      final auth = ref.read(authSessionProvider);
+      final sync = ref.read(syncControllerProvider);
+      if (auth.isAuthenticated && sync.isReady) {
+        sync.synchronizeNow();
+      }
+    });
   }
 
   @override
