@@ -118,8 +118,6 @@ class SecuritySection extends ConsumerWidget {
         CycleCareSettingsTile(
           icon: Icons.lock_open_outlined,
           title: 'Uji autentikasi perangkat',
-          subtitle:
-              'Coba kunci biometrik di luar alur pengaturan untuk memastikan perangkat mendukung.',
           onTap: () => Navigator.of(context).pushNamed('/lock'),
         ),
       ],
@@ -162,8 +160,6 @@ class CloudSyncSection extends ConsumerWidget {
     final last = syncSnapshot.lastSuccessfulSyncAt;
     return CycleCareSectionGroup(
       title: 'Cloud & sinkronisasi',
-      subtitle:
-          'Supabase adalah tempat penyimpanan kanonis. Drift tetap menjadi sumber lokal.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.cloud_outlined,
@@ -175,7 +171,6 @@ class CloudSyncSection extends ConsumerWidget {
           title: syncSnapshot.status == SyncGateStatus.failed
               ? 'Coba lagi sinkronisasi'
               : 'Sinkronkan sekarang',
-          subtitle: '${syncSnapshot.pendingCount} perubahan menunggu',
           onTap: () => ref.read(syncControllerProvider).synchronizeNow(),
         ),
         CycleCareSettingsTile(
@@ -199,21 +194,16 @@ class BackupSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return CycleCareSectionGroup(
       title: 'Backup & restore',
-      subtitle:
-          'Ekspor atau pulihkan catatan sebagai berkas JSON. Berkas tidak dienkripsi.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.backup_outlined,
           title: 'Kelola backup lokal',
-          subtitle:
-              'Ekspor catatan, pulihkan dari berkas, atau lihat ringkasan backup terakhir.',
           trailing: const Icon(Icons.chevron_right),
           onTap: onBackupTap,
         ),
         CycleCareSettingsTile(
           icon: Icons.delete_sweep_outlined,
           title: 'Catatan terarsip',
-          subtitle: 'Pulihkan catatan period yang dihapus dari perangkat.',
           onTap: () => _showDeleted(context, ref),
         ),
       ],
@@ -260,13 +250,10 @@ class AccountSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return CycleCareSectionGroup(
       title: 'Akun',
-      subtitle:
-          'Kelola sesi akun Supabase. Menghapus akun akan menghapus data cloud.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.logout,
           title: 'Keluar dari akun',
-          subtitle: 'Sesi akan berakhir. Data lokal tetap tersimpan.',
           onTap: () async {
             final confirm = await showDialog<bool>(
               context: context,
@@ -295,8 +282,6 @@ class AccountSection extends ConsumerWidget {
         CycleCareSettingsTile(
           icon: Icons.person_remove_outlined,
           title: 'Hapus akun cloud',
-          subtitle:
-              'Menghapus akun Supabase dan semua data cloud terkait. Tindakan ini tidak dapat dibatalkan.',
           destructive: true,
           onTap: () => _deleteAccount(context, ref),
         ),
@@ -355,14 +340,10 @@ class DangerZoneSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return CycleCareSectionGroup(
       title: 'Zona bahaya',
-      subtitle:
-          'Tindakan destruktif. Data yang dihapus tidak dapat dipulihkan kecuali melalui backup.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.delete_forever_outlined,
           title: 'Hapus semua data lokal',
-          subtitle:
-              'Menghapus period, prediksi, pengaturan, dan antrean sinkronisasi dari perangkat.',
           destructive: true,
           onTap: () => _deleteAll(context, ref),
         ),
