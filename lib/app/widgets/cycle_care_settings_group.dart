@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../design/cycle_care_design.dart';
-import 'cycle_care_section_header.dart';
 
 class CycleCareSectionGroup extends StatelessWidget {
   const CycleCareSectionGroup({
@@ -9,12 +8,7 @@ class CycleCareSectionGroup extends StatelessWidget {
     this.subtitle,
     this.action,
     required this.children,
-    this.padding = const EdgeInsets.fromLTRB(
-      CycleCareSpacing.lg,
-      CycleCareSpacing.md,
-      CycleCareSpacing.lg,
-      CycleCareSpacing.md,
-    ),
+    this.padding = EdgeInsets.zero,
     super.key,
   });
 
@@ -26,19 +20,9 @@ class CycleCareSectionGroup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final rows = <Widget>[
-      CycleCareSectionHeader(
-        title: title,
-        subtitle: subtitle,
-        action: action,
-      ),
-      const SizedBox(height: CycleCareSpacing.sm),
-      for (var i = 0; i < children.length; i++) ...[
-        children[i],
-        if (i != children.length - 1)
-          const SizedBox(height: CycleCareSpacing.sm),
-      ],
-    ];
+    final theme = Theme.of(context);
+    final colors = context.cycleCareColors;
+    final isDark = theme.brightness == Brightness.dark;
     return Semantics(
       container: true,
       label: title,
@@ -46,7 +30,95 @@ class CycleCareSectionGroup extends StatelessWidget {
         padding: padding,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: rows,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 4, 8),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          title,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                                fontSize: 13,
+                                height: 1.3,
+                                fontWeight: FontWeight.w500,
+                                color: colors.textSecondary,
+                                letterSpacing: 0.15,
+                              ) ??
+                              TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: colors.textSecondary,
+                              ),
+                        ),
+                        if (subtitle != null) ...[
+                          const SizedBox(height: 3),
+                          Text(
+                            subtitle!,
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              fontSize: 12.5,
+                              height: 1.45,
+                              color: colors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                  if (action != null) ...[
+                    const SizedBox(width: CycleCareSpacing.sm),
+                    action!,
+                  ],
+                ],
+              ),
+            ),
+            DecoratedBox(
+              decoration: BoxDecoration(
+                color: colors.surface,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: colors.divider),
+                boxShadow: [
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.28)
+                        : const Color(0x0D0F172A),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: isDark
+                        ? Colors.black.withValues(alpha: 0.18)
+                        : const Color(0x08000000),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ],
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    for (var i = 0; i < children.length; i++) ...[
+                      children[i],
+                      if (i != children.length - 1)
+                        Divider(
+                          height: 1,
+                          thickness: 1,
+                          color: colors.divider.withValues(
+                            alpha: isDark ? 1 : 0.7,
+                          ),
+                        ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -76,6 +148,7 @@ class CycleCareSettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final colors = context.cycleCareColors;
     final foreground =
         destructive ? theme.colorScheme.error : theme.colorScheme.onSurface;
     final accent = destructive
@@ -89,22 +162,18 @@ class CycleCareSettingsTile extends StatelessWidget {
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: CycleCareRadius.mediumBorder,
           child: Padding(
-            padding: const EdgeInsets.symmetric(
-              horizontal: CycleCareSpacing.md,
-              vertical: CycleCareSpacing.sm,
-            ),
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
                 Container(
-                  width: 36,
-                  height: 36,
+                  width: 40,
+                  height: 40,
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: accent,
-                    borderRadius: BorderRadius.circular(CycleCareRadius.pill),
+                    shape: BoxShape.circle,
                   ),
                   child: Icon(icon, size: 20, color: foreground),
                 ),
@@ -115,22 +184,34 @@ class CycleCareSettingsTile extends StatelessWidget {
                     children: [
                       Text(
                         title,
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          color: foreground,
-                        ),
+                        style: theme.textTheme.titleSmall?.copyWith(
+                              fontSize: 14,
+                              height: 1.35,
+                              fontWeight: FontWeight.w600,
+                              color: foreground,
+                            ) ??
+                            TextStyle(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                              color: foreground,
+                            ),
                       ),
                       if (subtitle != null) ...[
                         const SizedBox(height: 2),
                         Text(
                           subtitle!,
-                          style: theme.textTheme.bodySmall,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            fontSize: 12,
+                            height: 1.5,
+                            color: colors.textSecondary,
+                          ),
                         ),
                       ],
                     ],
                   ),
                 ),
                 if (trailing != null) ...[
-                  const SizedBox(width: CycleCareSpacing.sm),
+                  const SizedBox(width: CycleCareSpacing.md),
                   trailing!,
                 ],
               ],
