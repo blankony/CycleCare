@@ -14,7 +14,7 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.actions = const <Widget>[],
     this.scrim = true,
-    this.centerTitle = false,
+    this.centerTitle = true,
     super.key,
   });
 
@@ -26,8 +26,6 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context) {
     final colors = context.cycleCareColors;
-    final isBrandTitle = title.toUpperCase() == 'CYCLECARE';
-    final effectiveCenterTitle = centerTitle || isBrandTitle;
     final brandStyle = GoogleFonts.playfairDisplay(
       fontSize: 22,
       fontWeight: FontWeight.w700,
@@ -35,10 +33,10 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
       color: Theme.of(context).colorScheme.primary,
     );
     return AppBar(
-      centerTitle: effectiveCenterTitle,
+      centerTitle: true,
       title: Text(
-        isBrandTitle ? 'CYCLECARE' : title,
-        style: isBrandTitle ? brandStyle : null,
+        title.toUpperCase(),
+        style: brandStyle,
       ),
       backgroundColor: colors.background,
       surfaceTintColor: colors.background,
@@ -48,12 +46,7 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
       shape: Border(bottom: BorderSide(color: colors.divider)),
       actions: actions,
       iconTheme: IconThemeData(color: colors.textPrimary),
-      titleTextStyle: isBrandTitle
-          ? brandStyle
-          : Theme.of(context).textTheme.titleLarge?.copyWith(
-                color: colors.textPrimary,
-                fontWeight: FontWeight.w700,
-              ),
+      titleTextStyle: brandStyle,
     );
   }
 
