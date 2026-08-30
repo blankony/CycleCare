@@ -32,6 +32,18 @@ class SyncGatePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final snapshot = ref.watch(syncSnapshotProvider);
+    if (snapshot.status == SyncGateStatus.ready ||
+        snapshot.status == SyncGateStatus.offlineReady) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (context.mounted) context.go('/dashboard');
+      });
+      return const _SyncGateScaffold(
+        title: 'Tersinkron',
+        message: 'Membuka tracker...',
+        icon: Icons.check_circle_outline,
+        iconColor: CycleCareColors.classicBlue,
+      );
+    }
     if (snapshot.status == SyncGateStatus.synchronizing) {
       return const _SyncGateScaffold(
         title: 'Menyinkronkan',
