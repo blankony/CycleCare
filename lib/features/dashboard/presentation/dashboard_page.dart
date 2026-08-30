@@ -70,10 +70,10 @@ class DashboardPage extends ConsumerWidget {
             insights: insights,
             syncSnapshot: syncSnapshot,
             onRefresh: () async {
+              await ref.read(syncControllerProvider).synchronizeNow();
               ref.invalidate(activePeriodsProvider);
               ref.invalidate(predictionProvider);
               ref.invalidate(cycleInsightsProvider);
-              await ref.read(syncControllerProvider).synchronizeNow();
             },
             onRetrySync: () => ref.read(syncControllerProvider).retry(),
           ),
@@ -116,7 +116,6 @@ class _DashboardContent extends StatelessWidget {
       showOvulation: showOvulation,
     );
     final showsSyncBanner = {
-      SyncGateStatus.synchronizing,
       SyncGateStatus.offlineReady,
       SyncGateStatus.failed,
     }.contains(syncSnapshot.status);

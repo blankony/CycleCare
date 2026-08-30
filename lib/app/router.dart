@@ -111,9 +111,11 @@ String? resolveAppRedirect({
   if (syncStatus == SyncGateStatus.migrationRequired) {
     return location == '/local-data' ? null : '/local-data';
   }
-  final syncReady = syncStatus == SyncGateStatus.ready ||
-      syncStatus == SyncGateStatus.offlineReady;
-  if (!syncReady) return location == '/sync' ? null : '/sync';
+  final isBlockingSync = syncStatus == SyncGateStatus.failed ||
+      syncStatus == SyncGateStatus.authenticationExpired ||
+      syncStatus == SyncGateStatus.initialRequired ||
+      syncStatus == SyncGateStatus.synchronizing;
+  if (isBlockingSync) return location == '/sync' ? null : '/sync';
   final publicPath = {'/login', '/register', '/session', '/sync', '/local-data'}
       .contains(location);
   if (biometricEnabled && !publicPath && location != '/lock') {

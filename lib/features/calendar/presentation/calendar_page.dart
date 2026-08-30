@@ -62,6 +62,7 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
               () => _focusedDay = DateOnly.normalize(focusedDay),
             ),
             onRefresh: () async {
+              await ref.read(syncControllerProvider).synchronizeNow();
               ref.invalidate(activePeriodsProvider);
               ref.invalidate(predictionProvider);
               ref.invalidate(userCycleSettingsProvider);
@@ -142,7 +143,6 @@ class _CalendarContent extends StatelessWidget {
           !selected.isAfter(DateOnly.normalize(end));
     }).toList();
     final showsSync = {
-      SyncGateStatus.synchronizing,
       SyncGateStatus.offlineReady,
       SyncGateStatus.failed,
     }.contains(syncSnapshot.status);

@@ -99,12 +99,21 @@ class SyncController extends ChangeNotifier {
   Future<void> _synchronize(String userId, {required bool initial}) async {
     if (_busy) return;
     _busy = true;
-    snapshot = SyncGateSnapshot(
-      status: SyncGateStatus.synchronizing,
-      pendingCount: snapshot.pendingCount,
-      lastSuccessfulSyncAt: snapshot.lastSuccessfulSyncAt,
-    );
-    notifyListeners();
+    final isBackgroundRefresh = !initial &&
+        snapshot.status != SyncGateStatus.initialRequired &&
+        snapshot.status != SyncGateStatus.failed &&
+        snapshot.status != SyncGateStatus.migrationRequired &&
+        snapshot.status != SyncGateStatus.authenticationExpired;
+    if (isBackgroundRefresh) {
+      notifyListeners();
+    } else {
+      snapshot = SyncGateSnapshot(
+        status: SyncGateStatus.synchronizing,
+        pendingCount: snapshot.pendingCount,
+        lastSuccessfulSyncAt: snapshot.lastSuccessfulSyncAt,
+      );
+      notifyListeners();
+    }
     try {
       final result = await syncService.synchronize();
       if (result.failed > 0) {
@@ -125,15 +134,25 @@ class SyncController extends ChangeNotifier {
       notifyListeners();
     } catch (error) {
       final wasInitialized = await database.hasCompletedInitialSync(userId);
-      snapshot = SyncGateSnapshot(
-        status: wasInitialized
-            ? SyncGateStatus.offlineReady
-            : SyncGateStatus.failed,
-        pendingCount: await database.pendingSyncCount(userId),
-        lastSuccessfulSyncAt: await _lastSync(userId),
-        error: error,
-      );
-      notifyListeners();
+      if (isBackgroundRefresh && wasInitialized) {
+        snapshot = SyncGateSnapshot(
+          status: SyncGateStatus.offlineReady,
+          pendingCount: await database.pendingSyncCount(userId),
+          lastSuccessfulSyncAt: await _lastSync(userId),
+          error: error,
+        );
+        notifyListeners();
+      } else {
+        snapshot = SyncGateSnapshot(
+          status: wasInitialized
+              ? SyncGateStatus.offlineReady
+              : SyncGateStatus.failed,
+          pendingCount: await database.pendingSyncCount(userId),
+          lastSuccessfulSyncAt: await _lastSync(userId),
+          error: error,
+        );
+        notifyListeners();
+      }
     } finally {
       _busy = false;
     }

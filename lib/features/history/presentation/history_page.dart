@@ -53,6 +53,7 @@ class HistoryPage extends ConsumerWidget {
               flowLoading: logs.isLoading,
               syncSnapshot: ref.watch(syncSnapshotProvider),
               onRefresh: () async {
+                await ref.read(syncControllerProvider).synchronizeNow();
                 ref.invalidate(activePeriodsProvider);
                 ref.invalidate(flowLogsProvider);
                 await ref.read(activePeriodsProvider.future);
@@ -96,7 +97,6 @@ class _HistoryContent extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showsSync = {
-      SyncGateStatus.synchronizing,
       SyncGateStatus.offlineReady,
       SyncGateStatus.failed,
     }.contains(syncSnapshot.status);
