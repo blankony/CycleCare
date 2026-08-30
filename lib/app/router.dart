@@ -21,20 +21,26 @@ import 'providers.dart';
 import 'widgets.dart';
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final auth = ref.watch(authSessionProvider);
-  final sync = ref.watch(syncControllerProvider);
-  final biometricEnabled = _biometricEnabled(ref);
+  final auth = ref.read(authSessionProvider);
+  final sync = ref.read(syncControllerProvider);
 
   return GoRouter(
     initialLocation: '/session',
     refreshListenable: Listenable.merge([auth, sync]),
-    redirect: (context, state) => resolveAppRedirect(
-      authStatus: auth.status,
-      hasUser: auth.user != null,
-      syncStatus: sync.snapshot.status,
-      location: state.matchedLocation,
-      biometricEnabled: biometricEnabled,
-    ),
+    redirect: (context, state) {
+      final currentAuth = ref.read(authSessionProvider);
+      final currentSync = ref.read(syncControllerProvider);
+      final biometricEnabled =
+          ref.read(settingsProvider).valueOrNull?['biometric_enabled'] ==
+              'true';
+      return resolveAppRedirect(
+        authStatus: currentAuth.status,
+        hasUser: currentAuth.user != null,
+        syncStatus: currentSync.snapshot.status,
+        location: state.matchedLocation,
+        biometricEnabled: biometricEnabled,
+      );
+    },
     routes: [
       GoRoute(path: '/session', builder: (_, __) => const SessionPage()),
       GoRoute(
@@ -87,11 +93,6 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 });
-
-bool _biometricEnabled(Ref ref) {
-  final settings = ref.watch(settingsProvider).valueOrNull;
-  return settings?['biometric_enabled'] == 'true';
-}
 
 String? resolveAppRedirect({
   required AuthSessionStatus authStatus,
