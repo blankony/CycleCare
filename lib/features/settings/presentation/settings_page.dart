@@ -14,7 +14,6 @@ class SettingsPage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final syncSnapshot = ref.watch(syncSnapshotProvider);
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Pengaturan'),
       body: LayoutBuilder(
         builder: (context, constraints) {

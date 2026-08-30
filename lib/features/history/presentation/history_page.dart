@@ -20,7 +20,6 @@ class HistoryPage extends ConsumerWidget {
     final logs = ref.watch(flowLogsProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Riwayat period'),
       body: CycleCareBackground(
         child: periods.when(

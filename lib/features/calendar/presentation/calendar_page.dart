@@ -32,7 +32,6 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
     final settings = ref.watch(userCycleSettingsProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Kalender'),
       body: CycleCareBackground(
         child: periods.when(

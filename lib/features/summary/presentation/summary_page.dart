@@ -18,7 +18,6 @@ class SummaryPage extends ConsumerWidget {
     final action = ref.watch(periodActionsProvider);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       appBar: const CycleCareAppBar(title: 'Ringkasan siklus'),
       body: CycleCareBackground(
         child: summary.when(

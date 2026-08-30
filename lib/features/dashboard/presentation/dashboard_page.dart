@@ -41,36 +41,41 @@ class DashboardPage extends ConsumerWidget {
     });
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
       backgroundColor: Colors.transparent,
+      appBar: CycleCareAppBar(
+        title: 'CycleCare',
+        actions: [
+          IconButton(
+            tooltip: 'Buka akun dan pengaturan',
+            onPressed: () => context.go('/settings'),
+            icon: const Icon(Icons.account_circle_outlined),
+          ),
+        ],
+      ),
       body: CycleCareBackground(
-        child: SafeArea(
-          bottom: false,
-          top: false,
-          child: periods.when(
-            loading: () => const CycleCareLoadingState(),
-            error: (_, __) => CycleCareErrorState(
-              message:
-                  'Data lokalmu tetap aman. Coba muat kembali untuk menampilkan catatan terbaru.',
-              onRetry: () {
-                ref.invalidate(activePeriodsProvider);
-                ref.invalidate(cycleInsightsProvider);
-              },
-            ),
-            data: (records) => _DashboardContent(
-              records: records,
-              prediction: prediction,
-              settings: settings,
-              insights: insights,
-              syncSnapshot: syncSnapshot,
-              onRefresh: () async {
-                ref.invalidate(activePeriodsProvider);
-                ref.invalidate(predictionProvider);
-                ref.invalidate(cycleInsightsProvider);
-                await ref.read(syncControllerProvider).synchronizeNow();
-              },
-              onRetrySync: () => ref.read(syncControllerProvider).retry(),
-            ),
+        child: periods.when(
+          loading: () => const CycleCareLoadingState(),
+          error: (_, __) => CycleCareErrorState(
+            message:
+                'Data lokalmu tetap aman. Coba muat kembali untuk menampilkan catatan terbaru.',
+            onRetry: () {
+              ref.invalidate(activePeriodsProvider);
+              ref.invalidate(cycleInsightsProvider);
+            },
+          ),
+          data: (records) => _DashboardContent(
+            records: records,
+            prediction: prediction,
+            settings: settings,
+            insights: insights,
+            syncSnapshot: syncSnapshot,
+            onRefresh: () async {
+              ref.invalidate(activePeriodsProvider);
+              ref.invalidate(predictionProvider);
+              ref.invalidate(cycleInsightsProvider);
+              await ref.read(syncControllerProvider).synchronizeNow();
+            },
+            onRetrySync: () => ref.read(syncControllerProvider).retry(),
           ),
         ),
       ),
@@ -202,51 +207,10 @@ class _DashboardHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final status = _syncChip(syncSnapshot.status);
-    return Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 36,
-                    height: 36,
-                    decoration: const BoxDecoration(
-                      color: CycleCareColors.period,
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.water_drop_rounded,
-                      size: 20,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: CycleCareSpacing.xs),
-                  Text(
-                    'CycleCare',
-                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          color: CycleCareColors.periodStrong,
-                        ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: CycleCareSpacing.xs),
-              CycleCareStatusChip(
-                label: status.label,
-                icon: status.icon,
-                tone: status.tone,
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          tooltip: 'Buka akun dan pengaturan',
-          onPressed: () => context.go('/settings'),
-          icon: const Icon(Icons.account_circle_outlined),
-        ),
-      ],
+    return CycleCareStatusChip(
+      label: status.label,
+      icon: status.icon,
+      tone: status.tone,
     );
   }
 
