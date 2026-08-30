@@ -49,6 +49,7 @@ class DashboardPage extends ConsumerWidget {
       backgroundColor: Colors.transparent,
       appBar: CycleCareAppBar(
         title: 'CycleCare',
+        centerTitle: true,
         actions: [
           IconButton(
             tooltip: 'Buka akun dan pengaturan',

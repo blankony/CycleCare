@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 import 'design/cycle_care_design.dart';
 
@@ -13,18 +14,32 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.title,
     this.actions = const <Widget>[],
     this.scrim = true,
+    this.centerTitle = false,
     super.key,
   });
 
   final String title;
   final List<Widget> actions;
   final bool scrim;
+  final bool centerTitle;
 
   @override
   Widget build(BuildContext context) {
     final colors = context.cycleCareColors;
+    final isBrandTitle = title.toUpperCase() == 'CYCLECARE';
+    final effectiveCenterTitle = centerTitle || isBrandTitle;
+    final brandStyle = GoogleFonts.playfairDisplay(
+      fontSize: 22,
+      fontWeight: FontWeight.w700,
+      letterSpacing: 2.0,
+      color: Theme.of(context).colorScheme.primary,
+    );
     return AppBar(
-      title: Text(title),
+      centerTitle: effectiveCenterTitle,
+      title: Text(
+        isBrandTitle ? 'CYCLECARE' : title,
+        style: isBrandTitle ? brandStyle : null,
+      ),
       backgroundColor: colors.background,
       surfaceTintColor: colors.background,
       elevation: 0,
@@ -33,10 +48,12 @@ class CycleCareAppBar extends StatelessWidget implements PreferredSizeWidget {
       shape: Border(bottom: BorderSide(color: colors.divider)),
       actions: actions,
       iconTheme: IconThemeData(color: colors.textPrimary),
-      titleTextStyle: Theme.of(context).textTheme.titleLarge?.copyWith(
-            color: colors.textPrimary,
-            fontWeight: FontWeight.w700,
-          ),
+      titleTextStyle: isBrandTitle
+          ? brandStyle
+          : Theme.of(context).textTheme.titleLarge?.copyWith(
+                color: colors.textPrimary,
+                fontWeight: FontWeight.w700,
+              ),
     );
   }
 
