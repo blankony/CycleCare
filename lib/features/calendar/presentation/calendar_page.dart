@@ -1,5 +1,3 @@
-import 'dart:math' as math;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -234,21 +232,17 @@ class _CalendarCard extends StatelessWidget {
   final bool showOvulation;
 
   @override
-  Widget build(BuildContext context) => CycleCareCard(
-        padding: const EdgeInsets.fromLTRB(
-          CycleCareSpacing.xs,
-          CycleCareSpacing.sm,
-          CycleCareSpacing.xs,
-          CycleCareSpacing.lg,
-        ),
-        child: Column(
-          children: [
-            LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                child: SizedBox(
-                  width: math.max(336, constraints.maxWidth),
-                  child: TableCalendar<int>(
+  Widget build(BuildContext context) => ClipRect(
+        child: CycleCareCard(
+          padding: const EdgeInsets.fromLTRB(
+            CycleCareSpacing.sm,
+            CycleCareSpacing.sm,
+            CycleCareSpacing.sm,
+            CycleCareSpacing.lg,
+          ),
+          child: Column(
+            children: [
+              TableCalendar<int>(
                     locale: 'id_ID',
                     firstDay: DateTime(2000),
                     lastDay: DateTime(2100),
@@ -279,12 +273,13 @@ class _CalendarCard extends StatelessWidget {
                           const EdgeInsets.all(CycleCareSpacing.sm),
                       titleTextFormatter: (date, locale) =>
                           DateFormat('MMMM yyyy', locale).format(date),
-                      titleTextStyle: Theme.of(context).textTheme.titleLarge!,
+                       titleTextStyle: Theme.of(context).textTheme.titleLarge!,
                     ),
                     calendarStyle: const CalendarStyle(
                       outsideDaysVisible: true,
                       markersMaxCount: 0,
-                      cellMargin: EdgeInsets.all(CycleCareSpacing.xxs),
+                      cellMargin: EdgeInsets.zero,
+                      cellPadding: EdgeInsets.zero,
                     ),
                     calendarBuilders: CalendarBuilders<int>(
                       dowBuilder: (context, day) => Center(
@@ -339,17 +334,15 @@ class _CalendarCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                ),
+              const SizedBox(height: CycleCareSpacing.md),
+              Divider(color: context.cycleCareColors.divider, height: 1),
+              const SizedBox(height: CycleCareSpacing.md),
+              _Legend(
+                showFertile: showFertile,
+                showOvulation: showOvulation,
               ),
-            ),
-            const SizedBox(height: CycleCareSpacing.md),
-            Divider(color: context.cycleCareColors.divider, height: 1),
-            const SizedBox(height: CycleCareSpacing.md),
-            _Legend(
-              showFertile: showFertile,
-              showOvulation: showOvulation,
-            ),
-          ],
+            ],
+          ),
         ),
       );
 }
@@ -410,43 +403,51 @@ class _CalendarDay extends StatelessWidget {
     return Opacity(
       opacity: isOutside ? 0.38 : 1,
       child: Center(
-        child: Container(
-          width: 42,
-          height: 42,
-          decoration: BoxDecoration(
-            color: background,
-            shape: BoxShape.circle,
-            border: Border.all(
-              color: borderColor,
-              width: isSelected ? 2.5 : (isToday || predicted ? 1.5 : 1),
-            ),
-          ),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(bottom: CycleCareSpacing.xs),
-                child: Text(
-                  '${day.day}',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: foreground,
-                        fontWeight: isSelected || recorded
-                            ? FontWeight.w800
-                            : FontWeight.w600,
-                      ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final cellWidth = constraints.maxWidth.isFinite
+                ? constraints.maxWidth
+                : 48.0;
+            final diameter = (cellWidth - 6).clamp(28.0, 42.0);
+            return Container(
+              width: diameter,
+              height: diameter,
+              decoration: BoxDecoration(
+                color: background,
+                shape: BoxShape.circle,
+                border: Border.all(
+                  color: borderColor,
+                  width: isSelected ? 2.5 : (isToday || predicted ? 1.5 : 1),
                 ),
               ),
-              Positioned(
-                bottom: 5,
-                child: _DayMarkers(
-                  recorded: recorded,
-                  predicted: predicted,
-                  fertile: fertile,
-                  ovulation: ovulation,
-                ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: CycleCareSpacing.xs),
+                    child: Text(
+                      '${day.day}',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: foreground,
+                            fontWeight: isSelected || recorded
+                                ? FontWeight.w800
+                                : FontWeight.w600,
+                          ),
+                    ),
+                  ),
+                  Positioned(
+                    bottom: diameter * 0.12,
+                    child: _DayMarkers(
+                      recorded: recorded,
+                      predicted: predicted,
+                      fertile: fertile,
+                      ovulation: ovulation,
+                    ),
+                  ),
+                ],
               ),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
