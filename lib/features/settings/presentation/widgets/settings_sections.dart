@@ -18,14 +18,10 @@ class CycleVisibilitySection extends ConsumerWidget {
     final showFertile = cycleSettings?.showFertileWindow ?? false;
     return CycleCareSectionGroup(
       title: 'Tampilan siklus',
-      subtitle:
-          'Pilih informasi tambahan yang ingin ditampilkan di beranda dan kalender.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.water_drop_outlined,
-          title: 'Tampilkan perkiraan ovulasi',
-          subtitle:
-              'Perkiraan transparan dari tanggal period berikutnya, bukan pengukuran medis.',
+          title: 'Perkiraan ovulasi',
           trailing: Switch.adaptive(
             key: const ValueKey('settings.ovulation.switch'),
             value: showOvulation,
@@ -35,9 +31,7 @@ class CycleVisibilitySection extends ConsumerWidget {
         ),
         CycleCareSettingsTile(
           icon: Icons.eco_outlined,
-          title: 'Tampilkan perkiraan masa subur',
-          subtitle:
-              'Perkiraan masa subur tidak boleh digunakan sebagai metode kontrasepsi.',
+          title: 'Masa subur',
           trailing: Switch.adaptive(
             key: const ValueKey('settings.fertile.switch'),
             value: showFertile,
@@ -80,15 +74,10 @@ class ReminderSection extends ConsumerWidget {
     final reminderEnabled = settings['reminder_enabled'] == 'true';
     return CycleCareSectionGroup(
       title: 'Pengingat',
-      subtitle:
-          'Pengingat period disusun secara lokal di perangkat setelah izin diberikan.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.notifications_active_outlined,
           title: 'Pengingat period',
-          subtitle: reminderEnabled
-              ? 'Aktif. Jadwal akan mengikuti prediksi terbaru.'
-              : 'Tidak aktif. Tidak ada notifikasi yang dikirim.',
           trailing: Switch.adaptive(
             key: const ValueKey('settings.reminder.switch'),
             value: reminderEnabled,
@@ -116,15 +105,10 @@ class SecuritySection extends ConsumerWidget {
     final biometricEnabled = settings['biometric_enabled'] == 'true';
     return CycleCareSectionGroup(
       title: 'Keamanan',
-      subtitle:
-          'Kunci tambahan untuk membuka aplikasi. Tidak aktif otomatis pada instalasi baru.',
       children: [
         CycleCareSettingsTile(
           icon: Icons.fingerprint,
           title: 'Kunci biometrik',
-          subtitle: biometricEnabled
-              ? 'Aktif. Autentikasi diminta saat membuka aplikasi.'
-              : 'Tidak aktif.',
           trailing: Switch.adaptive(
             key: const ValueKey('settings.biometric.switch'),
             value: biometricEnabled,
