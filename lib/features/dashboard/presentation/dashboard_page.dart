@@ -283,7 +283,7 @@ class _CycleHeroCard extends StatelessWidget {
 
     return CycleCareCard(
       color: Theme.of(context).brightness == Brightness.dark
-          ? const Color(0xFF38232D)
+          ? CycleCareColors.darkSurface
           : CycleCareColors.surface,
       semanticLabel: _heroSemanticLabel(
         status: status,
@@ -318,10 +318,7 @@ class _CycleHeroCard extends StatelessWidget {
                           .textTheme
                           .displayMedium
                           ?.copyWith(
-                            color:
-                                Theme.of(context).brightness == Brightness.dark
-                                    ? const Color(0xFFFFB2D0)
-                                    : CycleCareColors.periodStrong,
+                            color: CycleCareColors.deepNavy,
                           ),
                     ),
                     const SizedBox(height: CycleCareSpacing.xs),
@@ -356,10 +353,10 @@ class _CycleHeroCard extends StatelessWidget {
               width: double.infinity,
               padding: const EdgeInsets.all(CycleCareSpacing.sm),
               decoration: BoxDecoration(
-                color: CycleCareColors.ovulationSoft.withValues(
+                color: CycleCareColors.iceBlue.withValues(
                   alpha: Theme.of(context).brightness == Brightness.dark
-                      ? 0.14
-                      : 0.72,
+                      ? 0.18
+                      : 1,
                 ),
                 borderRadius: BorderRadius.circular(CycleCareRadius.small),
                 border: Border.all(color: colors.divider),
@@ -367,9 +364,7 @@ class _CycleHeroCard extends StatelessWidget {
               child: Text(
                 'Terlambat ${status!.lateDays} hari dari rentang perkiraan',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).brightness == Brightness.dark
-                          ? const Color(0xFFFFE082)
-                          : CycleCareColors.warning,
+                      color: CycleCareColors.warning,
                       fontWeight: FontWeight.w700,
                     ),
               ),
@@ -686,12 +681,8 @@ class _PhaseCards extends StatelessWidget {
       cards.add(
         _PhaseCard(
           icon: Icons.update_rounded,
-          color: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFF38232D)
-              : CycleCareColors.predictionSoft,
-          iconColor: Theme.of(context).brightness == Brightness.dark
-              ? const Color(0xFFFFB2D0)
-              : CycleCareColors.periodStrong,
+          color: CycleCareColors.iceBlue,
+          iconColor: CycleCareColors.deepNavy,
           eyebrow: 'Berikutnya',
           date: _predictionRange(prediction)!,
           title: 'Period berikutnya',

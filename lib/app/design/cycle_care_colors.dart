@@ -1,46 +1,52 @@
 import 'package:flutter/material.dart';
 
 abstract final class CycleCareColors {
-  static const period = Color(0xFFBE185D);
-  static const periodStrong = Color(0xFF9D174D);
-  static const periodSoft = Color(0xFFFCE7F3);
-  static const fertile = Color(0xFFB9C9FA);
-  static const fertileStrong = Color(0xFF4C5FA8);
-  static const fertileSoft = Color(0xFFEEF2FF);
-  static const ovulation = Color(0xFFE6CE00);
-  static const ovulationSoft = Color(0xFFFFF8CC);
-  static const prediction = Color(0xFFF5A9D3);
-  static const predictionSoft = Color(0xFFFFE8F4);
+  static const deepNavy = Color(0xFF03045E);
+  static const classicBlue = Color(0xFF0077B6);
+  static const oceanBlue = Color(0xFF00B4D8);
+  static const skyBlue = Color(0xFF90E0EF);
+  static const iceBlue = Color(0xFFCAF0F8);
+
+  static const period = classicBlue;
+  static const periodStrong = deepNavy;
+  static const periodSoft = iceBlue;
+  static const fertile = skyBlue;
+  static const fertileStrong = classicBlue;
+  static const fertileSoft = iceBlue;
+  static const ovulation = oceanBlue;
+  static const ovulationSoft = Color(0xFFE0F7FD);
+  static const prediction = oceanBlue;
+  static const predictionSoft = iceBlue;
   static const peach = Color(0xFFFFD8BD);
 
-  static const background = Color(0xFFFFF7FA);
-  static const backgroundBlue = Color(0xFFF4F7FF);
-  static const surface = Color(0xFFFFFCFD);
-  static const surfaceMuted = Color(0xFFFBF1F5);
-  static const textPrimary = Color(0xFF171318);
-  static const textSecondary = Color(0xFF625B64);
-  static const divider = Color(0xFFF0E4EA);
+  static const background = Color(0xFFF8FDFF);
+  static const backgroundBlue = iceBlue;
+  static const surface = Colors.white;
+  static const surfaceMuted = iceBlue;
+  static const textPrimary = deepNavy;
+  static const textSecondary = Color(0xFF3A5A7A);
+  static const divider = skyBlue;
   static const success = Color(0xFF2E7D5B);
   static const warning = Color(0xFF8A5A00);
   static const error = Color(0xFFBA1A1A);
-  static const disabled = Color(0xFF9A929B);
+  static const disabled = Color(0xFF8AA0B5);
 
-  static const darkBackground = Color(0xFF1B1519);
-  static const darkBackgroundMiddle = Color(0xFF21181D);
-  static const darkBackgroundBlue = Color(0xFF171B27);
-  static const darkSurface = Color(0xFF261E23);
-  static const darkSurfaceMuted = Color(0xFF30242B);
-  static const darkTextPrimary = Color(0xFFFFF7FA);
-  static const darkTextSecondary = Color(0xFFD7C8D0);
-  static const darkDivider = Color(0xFF4A3942);
+  static const darkBackground = Color(0xFF0A1030);
+  static const darkBackgroundMiddle = Color(0xFF12204A);
+  static const darkBackgroundBlue = Color(0xFF0F2A3F);
+  static const darkSurface = Color(0xFF162040);
+  static const darkSurfaceMuted = Color(0xFF1C2E55);
+  static const darkTextPrimary = Color(0xFFEFF8FF);
+  static const darkTextSecondary = Color(0xFFB8D4EA);
+  static const darkDivider = Color(0xFF2A4A6A);
 
   static const backgroundGradient = LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
-      Color(0xFFFFF7FA),
-      Color(0xFFFFF9F4),
-      Color(0xFFF4F7FF),
+      Color(0xFFF8FDFF),
+      Colors.white,
+      Color(0xFFCAF0F8),
     ],
     stops: [0, 0.48, 1],
   );
@@ -62,14 +68,14 @@ class CycleCareSemanticColors extends ThemeExtension<CycleCareSemanticColors> {
 
   static const light = CycleCareSemanticColors(
     background: CycleCareColors.background,
-    backgroundMiddle: Color(0xFFFFF9F4),
-    backgroundBlue: CycleCareColors.backgroundBlue,
-    surface: CycleCareColors.surface,
-    surfaceMuted: CycleCareColors.surfaceMuted,
+    backgroundMiddle: Colors.white,
+    backgroundBlue: CycleCareColors.iceBlue,
+    surface: Colors.white,
+    surfaceMuted: CycleCareColors.iceBlue,
     surfaceTranslucent: Color(0xF2FFFFFF),
-    textPrimary: CycleCareColors.textPrimary,
+    textPrimary: CycleCareColors.deepNavy,
     textSecondary: CycleCareColors.textSecondary,
-    divider: CycleCareColors.divider,
+    divider: CycleCareColors.skyBlue,
   );
 
   static const dark = CycleCareSemanticColors(
@@ -78,7 +84,7 @@ class CycleCareSemanticColors extends ThemeExtension<CycleCareSemanticColors> {
     backgroundBlue: CycleCareColors.darkBackgroundBlue,
     surface: CycleCareColors.darkSurface,
     surfaceMuted: CycleCareColors.darkSurfaceMuted,
-    surfaceTranslucent: Color(0xF2261E23),
+    surfaceTranslucent: Color(0xF2162040),
     textPrimary: CycleCareColors.darkTextPrimary,
     textSecondary: CycleCareColors.darkTextSecondary,
     divider: CycleCareColors.darkDivider,

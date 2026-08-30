@@ -394,13 +394,13 @@ class _CalendarDay extends StatelessWidget {
     }
 
     final borderColor = isSelected
-        ? (dark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong)
+        ? CycleCareColors.classicBlue
         : isToday
             ? colors.textSecondary
             : predicted
-                ? CycleCareColors.prediction
+                ? CycleCareColors.oceanBlue
                 : fertile
-                    ? CycleCareColors.fertile
+                    ? CycleCareColors.skyBlue
                     : Colors.transparent;
     return Opacity(
       opacity: isOutside ? 0.38 : 1,
@@ -500,9 +500,7 @@ class _DayMarkers extends StatelessWidget {
           child: Container(
             width: 6,
             height: 6,
-            color: Theme.of(context).brightness == Brightness.dark
-                ? const Color(0xFFFFE45C)
-                : CycleCareColors.warning,
+            color: CycleCareColors.warning,
           ),
         ),
     ];

@@ -23,22 +23,20 @@ class CycleCareTheme {
     final isDark = brightness == Brightness.dark;
     final scheme = ColorScheme(
       brightness: brightness,
-      primary: CycleCareColors.period,
+      primary: CycleCareColors.classicBlue,
       onPrimary: Colors.white,
-      primaryContainer:
-          isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
-      onPrimaryContainer:
-          isDark ? const Color(0xFFFFD8E8) : CycleCareColors.periodStrong,
-      secondary: CycleCareColors.fertileStrong,
+      primaryContainer: CycleCareColors.iceBlue,
+      onPrimaryContainer: CycleCareColors.deepNavy,
+      secondary: CycleCareColors.oceanBlue,
       onSecondary: Colors.white,
       secondaryContainer:
-          isDark ? const Color(0xFF2D3867) : CycleCareColors.fertileSoft,
+          isDark ? const Color(0xFF0F3A5A) : const Color(0xFFE0F7FD),
       onSecondaryContainer:
-          isDark ? const Color(0xFFDDE4FF) : const Color(0xFF28356F),
+          isDark ? const Color(0xFFCAF0F8) : CycleCareColors.deepNavy,
       tertiary: CycleCareColors.warning,
       onTertiary: Colors.white,
       tertiaryContainer:
-          isDark ? const Color(0xFF4A3F00) : CycleCareColors.ovulationSoft,
+          isDark ? const Color(0xFF4A3F00) : const Color(0xFFFFF8CC),
       onTertiaryContainer:
           isDark ? const Color(0xFFFFF1A8) : const Color(0xFF3A3000),
       error: CycleCareColors.error,
@@ -56,11 +54,10 @@ class CycleCareTheme {
       shadow: Colors.black,
       scrim: Colors.black,
       inverseSurface:
-          isDark ? CycleCareColors.surface : CycleCareColors.textPrimary,
+          isDark ? Colors.white : CycleCareColors.deepNavy,
       onInverseSurface:
-          isDark ? CycleCareColors.textPrimary : CycleCareColors.surface,
-      inversePrimary:
-          isDark ? CycleCareColors.periodStrong : CycleCareColors.prediction,
+          isDark ? CycleCareColors.deepNavy : Colors.white,
+      inversePrimary: CycleCareColors.skyBlue,
       surfaceTint: Colors.transparent,
     );
     final base = ThemeData(
@@ -118,7 +115,8 @@ class CycleCareTheme {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: CycleCareRadius.mediumBorder,
-          borderSide: const BorderSide(color: CycleCareColors.period, width: 2),
+          borderSide:
+              const BorderSide(color: CycleCareColors.classicBlue, width: 2),
         ),
         errorBorder: OutlineInputBorder(
           borderRadius: CycleCareRadius.mediumBorder,
@@ -145,15 +143,13 @@ class CycleCareTheme {
         backgroundColor: semanticColors.surface,
         surfaceTintColor: Colors.transparent,
         indicatorColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+            isDark ? const Color(0xFF123A5A) : CycleCareColors.iceBlue,
         indicatorShape: const StadiumBorder(),
         iconTheme: WidgetStateProperty.resolveWith(
           (states) => IconThemeData(
             size: 24,
             color: states.contains(WidgetState.selected)
-                ? (isDark
-                    ? const Color(0xFFFFB2D0)
-                    : CycleCareColors.periodStrong)
+                ? CycleCareColors.classicBlue
                 : semanticColors.textSecondary,
           ),
         ),
@@ -164,9 +160,7 @@ class CycleCareTheme {
                 ? FontWeight.w700
                 : FontWeight.w600,
             color: states.contains(WidgetState.selected)
-                ? (isDark
-                    ? const Color(0xFFFFB2D0)
-                    : CycleCareColors.periodStrong)
+                ? CycleCareColors.deepNavy
                 : semanticColors.textSecondary,
           ),
         ),
@@ -174,15 +168,13 @@ class CycleCareTheme {
       navigationRailTheme: NavigationRailThemeData(
         backgroundColor: semanticColors.surface,
         indicatorColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
-        selectedIconTheme: IconThemeData(
-          color:
-              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+            isDark ? const Color(0xFF123A5A) : CycleCareColors.iceBlue,
+        selectedIconTheme: const IconThemeData(
+          color: CycleCareColors.classicBlue,
         ),
         unselectedIconTheme: IconThemeData(color: semanticColors.textSecondary),
         selectedLabelTextStyle: textTheme.labelLarge?.copyWith(
-          color:
-              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+          color: CycleCareColors.deepNavy,
         ),
         unselectedLabelTextStyle: textTheme.labelLarge?.copyWith(
           color: semanticColors.textSecondary,
@@ -198,8 +190,8 @@ class CycleCareTheme {
             (states) => states.contains(WidgetState.disabled)
                 ? semanticColors.surfaceMuted
                 : states.contains(WidgetState.pressed)
-                    ? CycleCareColors.periodStrong
-                    : CycleCareColors.period,
+                    ? CycleCareColors.deepNavy
+                    : CycleCareColors.classicBlue,
           ),
           foregroundColor: WidgetStateProperty.resolveWith(
             (states) => states.contains(WidgetState.disabled)
@@ -218,8 +210,7 @@ class CycleCareTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(48, 52),
           padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 15),
-          foregroundColor:
-              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+          foregroundColor: CycleCareColors.classicBlue,
           side: BorderSide(color: semanticColors.divider),
           shape: RoundedRectangleBorder(
             borderRadius: CycleCareRadius.mediumBorder,
@@ -230,8 +221,7 @@ class CycleCareTheme {
       textButtonTheme: TextButtonThemeData(
         style: TextButton.styleFrom(
           minimumSize: const Size(48, 48),
-          foregroundColor:
-              isDark ? const Color(0xFFFFB2D0) : CycleCareColors.periodStrong,
+          foregroundColor: CycleCareColors.classicBlue,
           shape: const RoundedRectangleBorder(
             borderRadius: BorderRadius.all(
               Radius.circular(CycleCareRadius.small),
@@ -250,8 +240,7 @@ class CycleCareTheme {
       ),
       chipTheme: base.chipTheme.copyWith(
         backgroundColor: semanticColors.surfaceMuted,
-        selectedColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        selectedColor: CycleCareColors.iceBlue,
         side: BorderSide(color: semanticColors.divider),
         shape: const StadiumBorder(),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
@@ -294,11 +283,9 @@ class CycleCareTheme {
         space: 1,
       ),
       progressIndicatorTheme: ProgressIndicatorThemeData(
-        color: CycleCareColors.period,
-        linearTrackColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
-        circularTrackColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
+        color: CycleCareColors.oceanBlue,
+        linearTrackColor: CycleCareColors.iceBlue,
+        circularTrackColor: CycleCareColors.iceBlue,
       ),
       datePickerTheme: DatePickerThemeData(
         backgroundColor: semanticColors.surface,
@@ -307,13 +294,29 @@ class CycleCareTheme {
           borderRadius: CycleCareRadius.cardBorder,
           side: BorderSide(color: semanticColors.divider),
         ),
-        headerBackgroundColor:
-            isDark ? const Color(0xFF5B233C) : CycleCareColors.periodSoft,
-        headerForegroundColor:
-            isDark ? const Color(0xFFFFD8E8) : CycleCareColors.periodStrong,
+        headerBackgroundColor: CycleCareColors.iceBlue,
+        headerForegroundColor: CycleCareColors.deepNavy,
         dayOverlayColor: WidgetStatePropertyAll(
-          CycleCareColors.period.withValues(alpha: 0.08),
+          CycleCareColors.oceanBlue.withValues(alpha: 0.12),
         ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) return Colors.white;
+          return null;
+        }),
+        trackColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return CycleCareColors.classicBlue;
+          }
+          return null;
+        }),
+        trackOutlineColor: WidgetStateProperty.resolveWith((states) {
+          if (states.contains(WidgetState.selected)) {
+            return Colors.transparent;
+          }
+          return semanticColors.divider;
+        }),
       ),
     );
   }
