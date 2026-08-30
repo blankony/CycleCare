@@ -9,6 +9,7 @@ import '../../../app/design/cycle_care_design.dart';
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../core/date/date_only.dart';
+import '../../../core/errors/app_failure.dart';
 import '../../../domain/entities/cycle_insights.dart';
 import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/period_record.dart';
@@ -30,10 +31,14 @@ class DashboardPage extends ConsumerWidget {
 
     ref.listen(periodActionsProvider, (_, next) {
       next.whenOrNull(
-        error: (_, __) => ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+        error: (error, __) => ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
             content: Text(
-              'Perubahan belum dapat disimpan. Data sebelumnya tetap aman.',
+              error is AppFailure
+                  ? error.message
+                  : error.toString().isNotEmpty
+                      ? error.toString()
+                      : 'Perubahan belum dapat disimpan. Data sebelumnya tetap aman.',
             ),
           ),
         ),

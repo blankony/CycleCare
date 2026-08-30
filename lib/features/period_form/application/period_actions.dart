@@ -193,15 +193,21 @@ class PeriodActionsController extends AsyncNotifier<void> {
 
   Future<void> _recalculateAndNotify({DateTime? reminderStartDate}) async {
     final prediction = await recalculation.recalculate();
-    await notifications.cancelAll();
+    try {
+      await notifications.cancelAll();
+    } catch (_) {}
     if (prediction.ready) {
-      await notifications.schedulePredictionReminders(
-        windowStart: prediction.windowStart!,
-        predictedStart: prediction.predictedStart!,
-      );
+      try {
+        await notifications.schedulePredictionReminders(
+          windowStart: prediction.windowStart!,
+          predictedStart: prediction.predictedStart!,
+        );
+      } catch (_) {}
     }
     if (reminderStartDate != null) {
-      await notifications.scheduleEndReminder(startDate: reminderStartDate);
+      try {
+        await notifications.scheduleEndReminder(startDate: reminderStartDate);
+      } catch (_) {}
     }
   }
 
