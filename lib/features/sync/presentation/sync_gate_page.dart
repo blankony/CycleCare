@@ -20,6 +20,12 @@ class SessionPage extends StatelessWidget {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
+              Image.asset(
+                'assets/images/cyclecare-logo.png',
+                width: 120,
+                height: 120,
+              ),
+              const SizedBox(height: 24),
               const CircularProgressIndicator(),
               const SizedBox(height: 16),
               Text(l10n.loadingPreparingCycle),
@@ -46,16 +52,22 @@ class SyncGatePage extends ConsumerWidget {
       return _SyncGateScaffold(
         title: l10n.statusSynced,
         message: 'Opening tracker...',
-        icon: Icons.check_circle_outline,
-        iconColor: CycleCareColors.classicBlue,
+        logoWidget: Image.asset(
+          'assets/images/cyclecare-logo.png',
+          width: 96,
+          height: 96,
+        ),
       );
     }
     if (snapshot.status == SyncGateStatus.synchronizing) {
       return _SyncGateScaffold(
         title: l10n.statusSyncing,
         message: l10n.calendarLoading,
-        icon: Icons.cloud_sync,
-        iconColor: CycleCareColors.fertileStrong,
+        logoWidget: Image.asset(
+          'assets/images/cyclecare-logo.png',
+          width: 96,
+          height: 96,
+        ),
       );
     }
     final migration = snapshot.status == SyncGateStatus.migrationRequired;
@@ -170,16 +182,18 @@ class _SyncGateScaffold extends StatelessWidget {
   const _SyncGateScaffold({
     required this.title,
     required this.message,
-    required this.icon,
-    required this.iconColor,
+    this.icon,
+    this.iconColor,
+    this.logoWidget,
     this.actions = const <Widget>[],
     this.footer,
   });
 
   final String title;
   final String message;
-  final IconData icon;
-  final Color iconColor;
+  final IconData? icon;
+  final Color? iconColor;
+  final Widget? logoWidget;
   final List<Widget> actions;
   final Widget? footer;
 
@@ -208,20 +222,23 @@ class _SyncGateScaffold extends StatelessWidget {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Center(
-                                child: Container(
-                                  width: 96,
-                                  height: 96,
-                                  alignment: Alignment.center,
-                                  decoration: BoxDecoration(
-                                    color: iconColor.withValues(alpha: 0.12),
-                                    borderRadius: BorderRadius.circular(
-                                        CycleCareRadius.card),
-                                    border: Border.all(
-                                      color: iconColor.withValues(alpha: 0.24),
+                                child: logoWidget ??
+                                    Container(
+                                      width: 96,
+                                      height: 96,
+                                      alignment: Alignment.center,
+                                      decoration: BoxDecoration(
+                                        color: iconColor!.withValues(alpha: 0.12),
+                                        borderRadius: BorderRadius.circular(
+                                            CycleCareRadius.card),
+                                        border: Border.all(
+                                          color:
+                                              iconColor!.withValues(alpha: 0.24),
+                                        ),
+                                      ),
+                                      child:
+                                          Icon(icon, size: 44, color: iconColor),
                                     ),
-                                  ),
-                                  child: Icon(icon, size: 44, color: iconColor),
-                                ),
                               ),
                               const SizedBox(height: CycleCareSpacing.lg),
                               Text(
@@ -282,20 +299,12 @@ class _GateHeader extends StatelessWidget {
     final theme = Theme.of(context);
     return Row(
       children: [
-        Container(
-          width: 44,
-          height: 44,
-          alignment: Alignment.center,
-          decoration: const BoxDecoration(
-            color: CycleCareColors.period,
-            shape: BoxShape.circle,
-          ),
-          child: const Text(
-            'CC',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-            ),
+        ClipOval(
+          child: Image.asset(
+            'assets/images/cyclecare-logo.png',
+            width: 44,
+            height: 44,
+            fit: BoxFit.cover,
           ),
         ),
         const SizedBox(width: CycleCareSpacing.sm),

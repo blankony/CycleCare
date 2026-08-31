@@ -38,10 +38,22 @@ dev_dependencies:
   build_runner: ^2.4.15
   drift_dev: ^2.25.1
   flutter_lints: ^5.0.0
+  flutter_launcher_icons: ^0.14.3
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/cyclecare-logo.png"
+  adaptive_icon_background: "#03045E"
+  adaptive_icon_foreground: "assets/images/cyclecare-logo.png"
+  web:
+    generate: true
+    image_path: "assets/images/cyclecare-logo.png"
 
 flutter:
   generate: true
   uses-material-design: true
   assets:
     - .env
+    - assets/images/
 

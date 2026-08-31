@@ -1,11 +1,11 @@
 {
-    "name": "cycle_care",
-    "short_name": "cycle_care",
+    "name": "CycleCare",
+    "short_name": "CycleCare",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#03045E",
+    "theme_color": "#03045E",
+    "description": "Offline-first period tracker.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [
