@@ -16,6 +16,7 @@ import '../features/summary/presentation/summary_page.dart';
 import '../features/sync/presentation/sync_gate_page.dart';
 import '../app/auth_session_controller.dart';
 import '../domain/entities/sync_state.dart';
+import '../l10n/app_localizations.dart';
 import 'design/cycle_care_design.dart';
 import 'providers.dart';
 import 'widgets.dart';
@@ -253,7 +254,7 @@ class _AppShellState extends State<AppShell> {
                                 ),
                               ),
                             ),
-                            destinations: _railDestinations,
+                            destinations: _railDestinations(context),
                           ),
                         ),
                       ),
@@ -288,7 +289,7 @@ class _AppShellState extends State<AppShell> {
                   child: NavigationBar(
                     selectedIndex: widget.navigationShell.currentIndex,
                     onDestinationSelected: _onDestinationSelected,
-                    destinations: _barDestinations,
+                    destinations: _barDestinations(context),
                   ),
                 ),
               ),
@@ -297,46 +298,52 @@ class _AppShellState extends State<AppShell> {
         },
       );
 
-  static const _barDestinations = [
-    NavigationDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: 'Beranda',
-    ),
-    NavigationDestination(
-      icon: Icon(Icons.calendar_month_outlined),
-      selectedIcon: Icon(Icons.calendar_month),
-      label: 'Kalender',
-    ),
-    NavigationDestination(icon: Icon(Icons.history), label: 'Riwayat'),
-    NavigationDestination(
-      icon: Icon(Icons.settings_outlined),
-      selectedIcon: Icon(Icons.settings),
-      label: 'Pengaturan',
-    ),
-  ];
+  static List<NavigationDestination> _barDestinations(
+          BuildContext context) =>
+      [
+        NavigationDestination(
+          icon: const Icon(Icons.home_outlined),
+          selectedIcon: const Icon(Icons.home),
+          label: AppLocalizations.of(context).navHome,
+        ),
+        NavigationDestination(
+          icon: const Icon(Icons.calendar_month_outlined),
+          selectedIcon: const Icon(Icons.calendar_month),
+          label: AppLocalizations.of(context).navCalendar,
+        ),
+        NavigationDestination(
+            icon: const Icon(Icons.history),
+            label: AppLocalizations.of(context).navHistory),
+        NavigationDestination(
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings),
+          label: AppLocalizations.of(context).navSettings,
+        ),
+      ];
 
-  static const _railDestinations = [
-    NavigationRailDestination(
-      icon: Icon(Icons.home_outlined),
-      selectedIcon: Icon(Icons.home),
-      label: Text('Beranda'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.calendar_month_outlined),
-      selectedIcon: Icon(Icons.calendar_month),
-      label: Text('Kalender'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.history),
-      label: Text('Riwayat'),
-    ),
-    NavigationRailDestination(
-      icon: Icon(Icons.settings_outlined),
-      selectedIcon: Icon(Icons.settings),
-      label: Text('Pengaturan'),
-    ),
-  ];
+  static List<NavigationRailDestination> _railDestinations(
+          BuildContext context) =>
+      [
+        NavigationRailDestination(
+          icon: const Icon(Icons.home_outlined),
+          selectedIcon: const Icon(Icons.home),
+          label: Text(AppLocalizations.of(context).navHome),
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Icons.calendar_month_outlined),
+          selectedIcon: const Icon(Icons.calendar_month),
+          label: Text(AppLocalizations.of(context).navCalendar),
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Icons.history),
+          label: Text(AppLocalizations.of(context).navHistory),
+        ),
+        NavigationRailDestination(
+          icon: const Icon(Icons.settings_outlined),
+          selectedIcon: const Icon(Icons.settings),
+          label: Text(AppLocalizations.of(context).navSettings),
+        ),
+      ];
 }
 
 class _KeepAlivePage extends StatefulWidget {
