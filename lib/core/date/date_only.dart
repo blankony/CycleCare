@@ -19,6 +19,13 @@ class DateOnly {
   static int differenceInDays(DateTime later, DateTime earlier) =>
       normalize(later).difference(normalize(earlier)).inDays;
 
-  static String display(DateTime value) =>
-      DateFormat('d MMMM yyyy', 'id_ID').format(normalize(value));
+  static String _resolveLocale(String? locale) {
+    final loc = locale ?? Intl.getCurrentLocale();
+    if (loc.startsWith('id')) return 'id_ID';
+    return 'en';
+  }
+
+  static String display(DateTime value, [String? locale]) =>
+      DateFormat('d MMMM yyyy', _resolveLocale(locale))
+          .format(normalize(value));
 }

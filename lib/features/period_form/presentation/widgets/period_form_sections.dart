@@ -5,6 +5,7 @@ import '../../../../app/widgets.dart';
 import '../../../../core/date/date_only.dart';
 import '../../../../domain/entities/enums.dart';
 import '../../../../domain/entities/period_day_log.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class PeriodDateSection extends StatelessWidget {
   const PeriodDateSection({
@@ -23,22 +24,24 @@ class PeriodDateSection extends StatelessWidget {
   final ValueChanged<bool> onOngoingChanged;
 
   @override
-  Widget build(BuildContext context) => CycleCareCard(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return CycleCareCard(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Tanggal period',
+            Text(l10n.periodFormSectionDates,
                 style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: CycleCareSpacing.xxs),
             Text(
-              'Pastikan rentang tanggal sesuai dengan catatanmu.',
+              l10n.periodFormDatesHint,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: context.cycleCareColors.textSecondary,
                   ),
             ),
             const SizedBox(height: CycleCareSpacing.lg),
             PeriodDateButton(
-              label: 'Tanggal mulai',
+              label: l10n.periodFormStartDate,
               value: startDate,
               onTap: onStartTap,
             ),
@@ -46,15 +49,15 @@ class PeriodDateSection extends StatelessWidget {
             SwitchListTile.adaptive(
               contentPadding: EdgeInsets.zero,
               minTileHeight: 48,
-              title: const Text('Masih berlangsung'),
-              subtitle: const Text('Aktifkan jika period belum selesai.'),
+              title: Text(l10n.periodFormOngoing),
+              subtitle: Text(l10n.periodFormOngoingHint),
               value: endDate == null,
               onChanged: onOngoingChanged,
             ),
             if (endDate != null) ...[
               const SizedBox(height: CycleCareSpacing.sm),
               PeriodDateButton(
-                label: 'Tanggal selesai',
+                label: l10n.periodFormEndDate,
                 value: endDate!,
                 onTap: onEndTap,
               ),
@@ -62,6 +65,7 @@ class PeriodDateSection extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class PeriodDateButton extends StatelessWidget {
@@ -77,9 +81,11 @@ class PeriodDateButton extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
         button: true,
-        label: '$label, ${DateOnly.display(value)}',
+        label: '$label, ${DateOnly.display(value, l10n.localeName)}',
         child: Material(
           color: context.cycleCareColors.surfaceMuted,
           borderRadius: CycleCareRadius.mediumBorder,
@@ -114,7 +120,7 @@ class PeriodDateButton extends StatelessWidget {
                         ),
                         const SizedBox(height: CycleCareSpacing.xxs),
                         Text(
-                          DateOnly.display(value),
+                          DateOnly.display(value, l10n.localeName),
                           style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ],
@@ -131,6 +137,7 @@ class PeriodDateButton extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class PeriodFlowSection extends StatelessWidget {
@@ -153,6 +160,7 @@ class PeriodFlowSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final existingByDate = {
       for (final log in existingLogs)
         DateOnly.format(log.logDate): MenstrualFlowText.fromValue(log.flow),
@@ -162,10 +170,10 @@ class PeriodFlowSection extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Flow harian', style: Theme.of(context).textTheme.titleLarge),
+          Text(l10n.periodFormFlowSection, style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: CycleCareSpacing.xxs),
           Text(
-            'Opsional. Setiap tanggal dapat diperbarui secara terpisah.',
+            l10n.periodFormFlowHint,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.cycleCareColors.textSecondary,
                 ),
@@ -209,10 +217,11 @@ class PeriodFlowDayEditor extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Semantics(
       container: true,
-      label: 'Flow ${DateOnly.display(date)}',
+      label: 'Flow ${DateOnly.display(date, l10n.localeName)}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -220,7 +229,7 @@ class PeriodFlowDayEditor extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  DateOnly.display(date),
+                  DateOnly.display(date, l10n.localeName),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
@@ -228,7 +237,7 @@ class PeriodFlowDayEditor extends StatelessWidget {
                 TextButton.icon(
                   onPressed: () => onChanged(null),
                   icon: const Icon(Icons.close_rounded, size: 18),
-                  label: const Text('Hapus flow'),
+                  label: Text(l10n.periodFormFlowHapus),
                 ),
             ],
           ),
@@ -314,9 +323,10 @@ class PeriodPrivacyNote extends StatelessWidget {
   const PeriodPrivacyNote({super.key});
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label:
-            'Privasi catatan. Catatan ini disimpan sebagai data pribadi akunmu.',
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+        label: l10n.periodFormPrivacyNote,
         child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -329,7 +339,7 @@ class PeriodPrivacyNote extends StatelessWidget {
             const SizedBox(width: CycleCareSpacing.xs),
             Flexible(
               child: Text(
-                'Catatan ini disimpan sebagai data pribadi akunmu.',
+                l10n.periodFormPrivacyNote,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: context.cycleCareColors.textSecondary,
@@ -339,6 +349,7 @@ class PeriodPrivacyNote extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class _FlowProviderNotice extends StatelessWidget {
@@ -347,7 +358,9 @@ class _FlowProviderNotice extends StatelessWidget {
   final bool isLoading;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(CycleCareSpacing.sm),
         decoration: BoxDecoration(
@@ -365,12 +378,13 @@ class _FlowProviderNotice extends StatelessWidget {
             Expanded(
               child: Text(
                 isLoading
-                    ? 'Flow yang tersimpan sedang dimuat.'
-                    : 'Flow yang tersimpan belum dapat dimuat. Pilihan baru tetap dapat disimpan.',
+                    ? l10n.periodFormFlowLoading
+                    : l10n.periodFormFlowUnavailable,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
           ],
         ),
       );
+  }
 }

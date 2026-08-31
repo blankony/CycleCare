@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/date_symbol_data_local.dart';
+import 'package:intl/intl.dart';
 import 'package:timezone/data/latest.dart' as timezone;
 import 'package:timezone/timezone.dart' as timezone;
 
@@ -10,10 +11,13 @@ import 'app/theme.dart';
 import 'app/providers.dart';
 import 'data/local/database.dart';
 import 'domain/services/local_notification_service.dart';
+import 'l10n/app_localizations.dart';
 
 Future<void> bootstrap() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await initializeDateFormatting('en');
   await initializeDateFormatting('id_ID');
+  Intl.defaultLocale = 'en';
   timezone.initializeTimeZones();
   timezone.setLocalLocation(timezone.getLocation('Asia/Jakarta'));
 
@@ -89,57 +93,65 @@ class _BootstrapStatusApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isConfigurationError = phase == BootstrapPhase.configurationMissing;
-    final title = isConfigurationError
-        ? 'Konfigurasi Supabase belum tersedia'
-        : phase == BootstrapPhase.initializationFailed
-            ? 'Supabase tidak dapat diinisialisasi'
-            : 'Menyiapkan CycleCare';
-    final message = isConfigurationError
-        ? 'Salin .env.example menjadi .env, lalu isi SUPABASE_URL dan SUPABASE_ANON_KEY.'
-        : phase == BootstrapPhase.initializationFailed
-            ? 'Periksa URL dan publishable key Supabase, lalu coba lagi.'
-            : phase == BootstrapPhase.restoringSession
-                ? 'Memulihkan sesi akun dengan aman.'
-                : 'Memuat konfigurasi aplikasi.';
     return MaterialApp(
       title: 'CycleCare',
       theme: CycleCareTheme.light(),
-      home: Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isConfigurationError ? Icons.cloud_off : Icons.sync,
-                  size: 56,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      locale: const Locale('en'),
+      home: Builder(
+        builder: (context) {
+          final l10n = AppLocalizations.of(context);
+          final title = isConfigurationError
+              ? 'Supabase configuration not available'
+              : phase == BootstrapPhase.initializationFailed
+                  ? 'Supabase initialization failed'
+                  : l10n.loadingPreparingCycle;
+          final message = isConfigurationError
+              ? 'Copy .env.example to .env and fill SUPABASE_URL and SUPABASE_ANON_KEY.'
+              : phase == BootstrapPhase.initializationFailed
+                  ? 'Check Supabase URL and anon key, then try again.'
+                  : phase == BootstrapPhase.restoringSession
+                      ? 'Restoring account session securely.'
+                      : 'Loading app configuration.';
+          return Scaffold(
+            body: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isConfigurationError ? Icons.cloud_off : Icons.sync,
+                      size: 56,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(title,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.headlineSmall),
+                    const SizedBox(height: 12),
+                    Text(message, textAlign: TextAlign.center),
+                    if (error != null && !isConfigurationError) ...[
+                      const SizedBox(height: 8),
+                      Text('Detail: ${error.runtimeType}',
+                          textAlign: TextAlign.center),
+                    ],
+                    if (phase == BootstrapPhase.loadingConfiguration ||
+                        phase == BootstrapPhase.supabaseInitialized ||
+                        phase == BootstrapPhase.restoringSession) ...[
+                      const SizedBox(height: 20),
+                      const CircularProgressIndicator(),
+                    ] else ...[
+                      const SizedBox(height: 20),
+                      FilledButton(
+                          onPressed: onRetry, child: Text(l10n.commonRetry)),
+                    ],
+                  ],
                 ),
-                const SizedBox(height: 16),
-                Text(title,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.headlineSmall),
-                const SizedBox(height: 12),
-                Text(message, textAlign: TextAlign.center),
-                if (error != null && !isConfigurationError) ...[
-                  const SizedBox(height: 8),
-                  Text('Detail: ${error.runtimeType}',
-                      textAlign: TextAlign.center),
-                ],
-                if (phase == BootstrapPhase.loadingConfiguration ||
-                    phase == BootstrapPhase.supabaseInitialized ||
-                    phase == BootstrapPhase.restoringSession) ...[
-                  const SizedBox(height: 20),
-                  const CircularProgressIndicator(),
-                ] else ...[
-                  const SizedBox(height: 20),
-                  FilledButton(
-                      onPressed: onRetry, child: const Text('Coba lagi')),
-                ],
-              ],
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

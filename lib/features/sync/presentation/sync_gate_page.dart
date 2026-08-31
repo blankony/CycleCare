@@ -7,23 +7,27 @@ import '../../../app/design/cycle_care_design.dart';
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../domain/entities/sync_state.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SessionPage extends StatelessWidget {
   const SessionPage({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
         body: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Memulihkan sesi akun...'),
+              const CircularProgressIndicator(),
+              const SizedBox(height: 16),
+              Text(l10n.loadingPreparingCycle),
             ],
           ),
         ),
       );
+  }
 }
 
 class SyncGatePage extends ConsumerWidget {
@@ -31,23 +35,25 @@ class SyncGatePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final snapshot = ref.watch(syncSnapshotProvider);
+    final locale = l10n.localeName.startsWith('id') ? 'id_ID' : 'en';
     if (snapshot.status == SyncGateStatus.ready ||
         snapshot.status == SyncGateStatus.offlineReady) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (context.mounted) context.go('/dashboard');
       });
-      return const _SyncGateScaffold(
-        title: 'Tersinkron',
-        message: 'Membuka tracker...',
+      return _SyncGateScaffold(
+        title: l10n.statusSynced,
+        message: 'Opening tracker...',
         icon: Icons.check_circle_outline,
         iconColor: CycleCareColors.classicBlue,
       );
     }
     if (snapshot.status == SyncGateStatus.synchronizing) {
-      return const _SyncGateScaffold(
-        title: 'Menyinkronkan',
-        message: 'Menyiapkan akses aman ke data CycleCare.',
+      return _SyncGateScaffold(
+        title: l10n.statusSyncing,
+        message: l10n.calendarLoading,
         icon: Icons.cloud_sync,
         iconColor: CycleCareColors.fertileStrong,
       );
@@ -55,19 +61,19 @@ class SyncGatePage extends ConsumerWidget {
     final migration = snapshot.status == SyncGateStatus.migrationRequired;
     final failure = snapshot.status == SyncGateStatus.failed;
     final title = switch (snapshot.status) {
-      SyncGateStatus.migrationRequired => 'Data lama ditemukan',
-      SyncGateStatus.failed => 'Sinkronisasi belum berhasil',
-      SyncGateStatus.authenticationExpired => 'Sesi berakhir',
+      SyncGateStatus.migrationRequired => 'Legacy data found',
+      SyncGateStatus.failed => 'Sync not yet successful',
+      SyncGateStatus.authenticationExpired => 'Session expired',
       _ => snapshot.status.label,
     };
     final message = switch (snapshot.status) {
       SyncGateStatus.migrationRequired =>
-        'Data lokal dari versi sebelumnya belum memiliki pemilik akun. Pilih tindakan sebelum data kesehatan dapat dibuka.',
+        'Local data from a previous version has no owner. Choose an action before health data can be opened.',
       SyncGateStatus.failed =>
-        'Pastikan koneksi tersedia lalu coba lagi. Instalasi baru tidak dapat membuka tracker tanpa sinkronisasi awal.',
+        'Ensure connection is available and try again. A fresh install cannot open tracker without initial sync.',
       SyncGateStatus.authenticationExpired =>
-        'Sesi Supabase berakhir. Masuk kembali untuk melanjutkan sinkronisasi.',
-      _ => 'Menyiapkan akses aman ke data CycleCare.',
+        'Supabase session expired. Sign in again to continue sync.',
+      _ => l10n.calendarLoading,
     };
     final icon = switch (snapshot.status) {
       SyncGateStatus.migrationRequired => Icons.folder_shared_outlined,
@@ -89,7 +95,7 @@ class SyncGatePage extends ConsumerWidget {
       footer: snapshot.lastSuccessfulSyncAt == null
           ? null
           : Text(
-              'Sinkronisasi cloud terakhir: ${DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(snapshot.lastSuccessfulSyncAt!.toLocal())}',
+              'Last cloud sync: ${DateFormat('d MMM yyyy, HH:mm', locale).format(snapshot.lastSuccessfulSyncAt!.toLocal())}',
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -99,7 +105,7 @@ class SyncGatePage extends ConsumerWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => _resolve(context, ref, attach: true),
-              child: const Text('Gunakan data lama untuk akun ini'),
+              child: const Text('Use legacy data for this account'),
             ),
           ),
           const SizedBox(height: CycleCareSpacing.sm),
@@ -107,7 +113,7 @@ class SyncGatePage extends ConsumerWidget {
             width: double.infinity,
             child: OutlinedButton(
               onPressed: () => _resolve(context, ref, attach: false),
-              child: const Text('Hapus data lama dari perangkat'),
+              child: const Text('Delete legacy data from device'),
             ),
           ),
         ] else if (snapshot.status == SyncGateStatus.authenticationExpired) ...[
@@ -115,7 +121,7 @@ class SyncGatePage extends ConsumerWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => context.go('/login'),
-              child: const Text('Masuk kembali'),
+              child: Text(l10n.authLoginAction),
             ),
           ),
         ] else ...[
@@ -123,7 +129,7 @@ class SyncGatePage extends ConsumerWidget {
             width: double.infinity,
             child: FilledButton(
               onPressed: () => ref.read(syncControllerProvider).retry(),
-              child: Text(failure ? 'Coba lagi' : 'Lanjutkan sinkronisasi'),
+              child: Text(failure ? l10n.commonRetry : l10n.commonContinue),
             ),
           ),
         ],
@@ -133,7 +139,7 @@ class SyncGatePage extends ConsumerWidget {
             width: double.infinity,
             child: TextButton(
               onPressed: () => context.go('/login'),
-              child: const Text('Kembali ke masuk'),
+              child: Text(l10n.authLoginAction),
             ),
           ),
         ],
@@ -307,7 +313,7 @@ class _GateFooter extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = context.cycleCareColors;
     return Text(
-      'Data periodmu tetap aman tersimpan di perangkat. Sinkronisasi hanya mengirim data ke akun Supabase ini.',
+      'Your period data stays safe on device. Sync only sends data to this Supabase account.',
       textAlign: TextAlign.center,
       style: theme.textTheme.bodySmall?.copyWith(
         color: colors.textSecondary,

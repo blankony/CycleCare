@@ -7,21 +7,23 @@ import '../../../../app/providers.dart';
 import '../../../../app/widgets/cycle_care_settings_group.dart';
 import '../../../../core/date/date_only.dart';
 import '../../../../domain/entities/sync_state.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class CycleVisibilitySection extends ConsumerWidget {
   const CycleVisibilitySection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final cycleSettings = ref.watch(userCycleSettingsProvider).valueOrNull;
     final showOvulation = cycleSettings?.showOvulationEstimate ?? false;
     final showFertile = cycleSettings?.showFertileWindow ?? false;
     return CycleCareSectionGroup(
-      title: 'Tampilan siklus',
+      title: l10n.settingsCycleDisplay,
       children: [
         CycleCareSettingsTile(
           icon: Icons.water_drop_outlined,
-          title: 'Perkiraan ovulasi',
+          title: l10n.settingsOvulationEstimate,
           trailing: Switch.adaptive(
             key: const ValueKey('settings.ovulation.switch'),
             value: showOvulation,
@@ -31,7 +33,7 @@ class CycleVisibilitySection extends ConsumerWidget {
         ),
         CycleCareSettingsTile(
           icon: Icons.eco_outlined,
-          title: 'Masa subur',
+          title: l10n.settingsFertileWindow,
           trailing: Switch.adaptive(
             key: const ValueKey('settings.fertile.switch'),
             value: showFertile,
@@ -57,8 +59,9 @@ class CycleVisibilitySection extends ConsumerWidget {
       ref.invalidate(predictionProvider);
     } catch (error) {
       if (!context.mounted) return;
+      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Gagal memperbarui preferensi: $error')),
+        SnackBar(content: Text(l10n.settingsUpdateFailed(error.toString()))),
       );
     }
   }
@@ -69,15 +72,16 @@ class ReminderSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final settings =
         ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
     final reminderEnabled = settings['reminder_enabled'] == 'true';
     return CycleCareSectionGroup(
-      title: 'Pengingat',
+      title: l10n.settingsReminders,
       children: [
         CycleCareSettingsTile(
           icon: Icons.notifications_active_outlined,
-          title: 'Pengingat period',
+          title: l10n.settingsReminderPeriod,
           trailing: Switch.adaptive(
             key: const ValueKey('settings.reminder.switch'),
             value: reminderEnabled,
@@ -100,15 +104,16 @@ class SecuritySection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final settings =
         ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
     final biometricEnabled = settings['biometric_enabled'] == 'true';
     return CycleCareSectionGroup(
-      title: 'Keamanan',
+      title: l10n.settingsSecurity,
       children: [
         CycleCareSettingsTile(
           icon: Icons.fingerprint,
-          title: 'Kunci biometrik',
+          title: l10n.settingsBiometricLock,
           trailing: Switch.adaptive(
             key: const ValueKey('settings.biometric.switch'),
             value: biometricEnabled,
@@ -117,7 +122,7 @@ class SecuritySection extends ConsumerWidget {
         ),
         CycleCareSettingsTile(
           icon: Icons.lock_open_outlined,
-          title: 'Uji autentikasi perangkat',
+          title: l10n.settingsTestAuth,
           onTap: () => Navigator.of(context).pushNamed('/lock'),
         ),
       ],
@@ -126,20 +131,21 @@ class SecuritySection extends ConsumerWidget {
 
   Future<void> _toggleBiometric(
       BuildContext context, WidgetRef ref, bool value) async {
+    final l10n = AppLocalizations.of(context);
     final security = ref.read(securityServiceProvider);
     final available = await security.isAvailable();
     if (!context.mounted) return;
     if (!available) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-          content: Text('Perangkat ini tidak mendukung kunci biometrik.')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text(l10n.settingsBiometricNotSupported)));
       return;
     }
     if (value) {
       final authenticated = await security.authenticate();
       if (!context.mounted) return;
       if (!authenticated) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-            content: Text('Autentikasi dibatalkan. Kunci tetap nonaktif.')));
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(l10n.settingsBiometricCancelled)));
         return;
       }
     }
@@ -155,30 +161,32 @@ class CloudSyncSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final syncSnapshot = ref.watch(syncSnapshotProvider);
     final authUser = ref.watch(authSessionProvider).user;
     final last = syncSnapshot.lastSuccessfulSyncAt;
+    final locale = l10n.localeName.startsWith('id') ? 'id_ID' : 'en';
     return CycleCareSectionGroup(
-      title: 'Cloud & sinkronisasi',
+      title: l10n.settingsCloudSync,
       children: [
         CycleCareSettingsTile(
           icon: Icons.cloud_outlined,
-          title: 'Akun aktif',
-          subtitle: authUser?.email ?? 'Akun Supabase',
+          title: l10n.settingsActiveAccount,
+          subtitle: authUser?.email ?? l10n.settingsSupabaseAccount,
         ),
         CycleCareSettingsTile(
           icon: Icons.sync,
           title: syncSnapshot.status == SyncGateStatus.failed
-              ? 'Coba lagi sinkronisasi'
-              : 'Sinkronkan sekarang',
+              ? l10n.settingsRetrySync
+              : l10n.settingsSyncNow,
           onTap: () => ref.read(syncControllerProvider).synchronizeNow(),
         ),
         CycleCareSettingsTile(
           icon: Icons.schedule,
-          title: 'Sinkronisasi terakhir',
+          title: l10n.settingsLastSync,
           subtitle: last == null
-              ? 'Belum pernah berhasil'
-              : DateFormat('d MMM yyyy, HH:mm', 'id_ID').format(last.toLocal()),
+              ? l10n.settingsNeverSynced
+              : DateFormat('d MMM yyyy, HH:mm', locale).format(last.toLocal()),
         ),
       ],
     );
@@ -192,18 +200,19 @@ class BackupSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return CycleCareSectionGroup(
-      title: 'Backup & restore',
+      title: l10n.settingsBackupRestore,
       children: [
         CycleCareSettingsTile(
           icon: Icons.backup_outlined,
-          title: 'Kelola backup lokal',
+          title: l10n.settingsManageBackup,
           trailing: const Icon(Icons.chevron_right),
           onTap: onBackupTap,
         ),
         CycleCareSettingsTile(
           icon: Icons.delete_sweep_outlined,
-          title: 'Catatan terarsip',
+          title: l10n.settingsArchivedNotes,
           onTap: () => _showDeleted(context, ref),
         ),
       ],
@@ -211,21 +220,22 @@ class BackupSection extends ConsumerWidget {
   }
 
   Future<void> _showDeleted(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final deleted = await ref.read(deletedPeriodsProvider.future);
     if (!context.mounted) return;
     await showModalBottomSheet<void>(
       context: context,
       builder: (context) => SafeArea(
         child: deleted.isEmpty
-            ? const Padding(
-                padding: EdgeInsets.all(24),
-                child: Text('Tidak ada catatan terarsip.'),
+            ? Padding(
+                padding: const EdgeInsets.all(24),
+                child: Text(l10n.settingsNoArchived),
               )
             : ListView(
                 shrinkWrap: true,
                 children: deleted
                     .map((record) => ListTile(
-                          title: Text(DateOnly.display(record.startDate)),
+                          title: Text(DateOnly.display(record.startDate, l10n.localeName)),
                           trailing: TextButton(
                             onPressed: () async {
                               await ref
@@ -233,7 +243,7 @@ class BackupSection extends ConsumerWidget {
                                   .restore(record.id);
                               if (context.mounted) Navigator.pop(context);
                             },
-                            child: const Text('Pulihkan'),
+                            child: Text(l10n.commonRestore),
                           ),
                         ))
                     .toList(),
@@ -248,27 +258,27 @@ class AccountSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return CycleCareSectionGroup(
-      title: 'Akun',
+      title: l10n.settingsAccount,
       children: [
         CycleCareSettingsTile(
           icon: Icons.logout,
-          title: 'Keluar dari akun',
+          title: l10n.settingsSignOut,
           onTap: () async {
             final confirm = await showDialog<bool>(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Keluar dari akun?'),
-                content: const Text(
-                    'Kamu dapat masuk kembali menggunakan akun Supabase yang sama.'),
+                title: Text(l10n.settingsSignOutTitle),
+                content: Text(l10n.settingsSignOutMessage),
                 actions: [
                   TextButton(
                     onPressed: () => Navigator.pop(context, false),
-                    child: const Text('Batal'),
+                    child: Text(l10n.commonCancel),
                   ),
                   FilledButton(
                     onPressed: () => Navigator.pop(context, true),
-                    child: const Text('Keluar'),
+                    child: Text(l10n.commonCancel == 'Cancel' ? 'Sign out' : 'Keluar'),
                   ),
                 ],
               ),
@@ -281,7 +291,7 @@ class AccountSection extends ConsumerWidget {
         ),
         CycleCareSettingsTile(
           icon: Icons.person_remove_outlined,
-          title: 'Hapus akun cloud',
+          title: l10n.settingsDeleteCloud,
           destructive: true,
           onTap: () => _deleteAccount(context, ref),
         ),
@@ -290,20 +300,20 @@ class AccountSection extends ConsumerWidget {
   }
 
   Future<void> _deleteAccount(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final first = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus akun cloud?'),
-        content: const Text(
-            'Akun Supabase, profil, dan semua data cloud terkait akan dihapus permanen.'),
+        title: Text(l10n.settingsDeleteCloudTitle),
+        content: Text(l10n.settingsDeleteCloudMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Lanjut'),
+            child: Text(l10n.commonContinue),
           ),
         ],
       ),
@@ -312,17 +322,16 @@ class AccountSection extends ConsumerWidget {
     final second = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi terakhir'),
-        content: const Text(
-            'Tindakan ini tidak dapat dibatalkan. Hapus akun dan data cloud?'),
+        title: Text(l10n.settingsDeleteCloudConfirmTitle),
+        content: Text(l10n.settingsDeleteCloudConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus akun'),
+            child: Text(l10n.settingsDeleteCloudAction),
           ),
         ],
       ),
@@ -338,12 +347,13 @@ class DangerZoneSection extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     return CycleCareSectionGroup(
-      title: 'Zona bahaya',
+      title: l10n.settingsDangerZone,
       children: [
         CycleCareSettingsTile(
           icon: Icons.delete_forever_outlined,
-          title: 'Hapus semua data lokal',
+          title: l10n.settingsDeleteLocal,
           destructive: true,
           onTap: () => _deleteAll(context, ref),
         ),
@@ -352,20 +362,20 @@ class DangerZoneSection extends ConsumerWidget {
   }
 
   Future<void> _deleteAll(BuildContext context, WidgetRef ref) async {
+    final l10n = AppLocalizations.of(context);
     final first = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Hapus semua data lokal?'),
-        content: const Text(
-            'Semua period, prediksi, pengaturan, dan antrean sinkronisasi akan dihapus dari perangkat. Data cloud dapat tersinkron kembali setelah sinkronisasi awal berikutnya. Akun Supabase tidak ikut dihapus.'),
+        title: Text(l10n.settingsDeleteLocalTitle),
+        content: Text(l10n.settingsDeleteLocalMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Lanjut'),
+            child: Text(l10n.commonContinue),
           ),
         ],
       ),
@@ -374,16 +384,16 @@ class DangerZoneSection extends ConsumerWidget {
     final second = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Konfirmasi terakhir'),
-        content: const Text('Tindakan ini tidak dapat dibatalkan. Lanjutkan?'),
+        title: Text(l10n.settingsDeleteLocalConfirmTitle),
+        content: Text(l10n.settingsDeleteLocalConfirmMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Batal'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Hapus semua'),
+            child: Text(l10n.settingsDeleteLocalAction),
           ),
         ],
       ),
@@ -397,7 +407,7 @@ class DangerZoneSection extends ConsumerWidget {
       ref.invalidate(settingsProvider);
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Data lokal telah dihapus.')));
+            SnackBar(content: Text(l10n.settingsLocalDeleted)));
       }
     }
   }

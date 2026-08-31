@@ -10,6 +10,7 @@ import '../../../core/errors/app_failure.dart';
 import '../../../domain/entities/enums.dart';
 import '../../../domain/entities/period_day_log.dart';
 import '../../../domain/entities/period_record.dart';
+import '../../../l10n/app_localizations.dart';
 import 'widgets/period_form_sections.dart';
 
 class PeriodFormPage extends ConsumerStatefulWidget {
@@ -49,6 +50,7 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final editing = _editingRecord != null;
     final actions = ref.watch(periodActionsProvider);
     final flowLogs = ref.watch(flowLogsProvider);
@@ -61,7 +63,7 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
 
     return Scaffold(
       appBar: CycleCareAppBar(
-        title: editing ? 'Perbarui period' : 'Catat period',
+        title: editing ? l10n.periodFormUpdateTitle : l10n.periodFormCreateTitle,
       ),
       body: CycleCareBackground(
         child: ListView(
@@ -85,8 +87,8 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                         Expanded(
                           child: Text(
                             editing
-                                ? 'Perbarui tanggal, flow harian, atau catatan tanpa mengubah data lain.'
-                                : 'Catat tanggal dan flow harian yang kamu ingat. Semua bagian dapat diperbarui nanti.',
+                                ? l10n.periodFormUpdateSubtitle
+                                : l10n.periodFormCreateSubtitle,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodyMedium
@@ -97,8 +99,8 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                         ),
                         if (editing) ...[
                           const SizedBox(width: CycleCareSpacing.sm),
-                          const CycleCareStatusChip(
-                            label: 'Data tercatat',
+                          CycleCareStatusChip(
+                            label: l10n.periodFormDateRecordedChip,
                             icon: Icons.verified_outlined,
                             tone: CycleCareStatusTone.success,
                           ),
@@ -130,12 +132,12 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Catatan opsional',
+                            l10n.periodFormNotesTitle,
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: CycleCareSpacing.xxs),
                           Text(
-                            'Hindari informasi yang tidak perlu agar catatan tetap ringkas.',
+                            l10n.periodFormNotesHint,
                             style: Theme.of(context)
                                 .textTheme
                                 .bodySmall
@@ -150,9 +152,9 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                             minLines: 3,
                             maxLines: 5,
                             textCapitalization: TextCapitalization.sentences,
-                            decoration: const InputDecoration(
-                              labelText: 'Catatan',
-                              hintText: 'Tambahkan catatan pribadi jika perlu',
+                            decoration: InputDecoration(
+                              labelText: l10n.periodFormNotesLabel,
+                              hintText: l10n.periodFormNotesPlaceholder,
                               alignLabelWithHint: true,
                             ),
                           ),
@@ -193,10 +195,10 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                 : const Icon(Icons.check_rounded),
             label: Text(
               actions.isLoading
-                  ? 'Menyimpan…'
+                  ? l10n.periodFormSaving
                   : editing
-                      ? 'Simpan perubahan'
-                      : 'Simpan catatan',
+                      ? l10n.commonSaveChanges
+                      : l10n.commonSaveNote,
             ),
           ),
         ),
@@ -217,12 +219,13 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
   }
 
   Future<void> _pickStart(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final value = await showDatePicker(
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateOnly.normalize(DateTime.now()),
       initialDate: _startDate,
-      helpText: 'Pilih tanggal mulai',
+      helpText: l10n.periodFormPickStartHelp,
     );
     if (value != null) {
       setState(() {
@@ -233,6 +236,7 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
   }
 
   Future<void> _pickEnd(BuildContext context) async {
+    final l10n = AppLocalizations.of(context);
     final today = DateOnly.normalize(DateTime.now());
     final initial = _endDate == null || _endDate!.isBefore(DateTime(2000))
         ? _startDate
@@ -242,7 +246,7 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
       firstDate: DateTime(2000),
       lastDate: today,
       initialDate: initial.isAfter(today) ? today : initial,
-      helpText: 'Pilih tanggal selesai',
+      helpText: l10n.periodFormPickEndHelp,
     );
     if (value != null) {
       setState(() {
@@ -277,21 +281,22 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                 );
         if (!mounted) return;
         if (outside.isNotEmpty) {
+          final l10n = AppLocalizations.of(context);
           final confirmed = await showDialog<bool>(
             context: context,
             builder: (context) => AlertDialog(
-              title: const Text('Flow di luar rentang period'),
+              title: Text(l10n.periodFormFlowOutOfRangeTitle),
               content: Text(
-                '${outside.length} catatan flow berada di luar tanggal baru dan akan dihapus. Lanjutkan?',
+                l10n.periodFormFlowOutOfRangeMessage(outside.length),
               ),
               actions: [
                 TextButton(
                   onPressed: () => Navigator.pop(context, false),
-                  child: const Text('Batal'),
+                  child: Text(l10n.commonCancel),
                 ),
                 FilledButton(
                   onPressed: () => Navigator.pop(context, true),
-                  child: const Text('Hapus dan simpan'),
+                  child: Text(l10n.periodFormFlowDeleteAndSave),
                 ),
               ],
             ),
@@ -325,26 +330,28 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
   }
 
   String? _validateDates() {
+    final l10n = AppLocalizations.of(context);
     final today = DateOnly.normalize(DateTime.now());
     if (_startDate.isAfter(today)) {
-      return 'Tanggal mulai tidak boleh di masa depan.';
+      return l10n.periodFormValidationStartFuture;
     }
     if (_endDate != null && _endDate!.isBefore(_startDate)) {
-      return 'Tanggal selesai tidak boleh sebelum tanggal mulai.';
+      return l10n.periodFormValidationEndBeforeStart;
     }
     if (_endDate != null && _endDate!.isAfter(today)) {
-      return 'Tanggal selesai tidak boleh di masa depan.';
+      return l10n.periodFormValidationEndFuture;
     }
     return null;
   }
 
   String _friendlyError(Object? error) {
+    final l10n = AppLocalizations.of(context);
     if (error is AppFailure) {
-      if (error.message.contains('tumpang tindih')) {
-        return 'Rentang ini bertumpang tindih dengan catatan lain.';
+      if (error.message.contains('tumpang tindih') || error.message.toLowerCase().contains('overlap')) {
+        return l10n.periodFormOverlap;
       }
       return error.message;
     }
-    return 'Catatan belum dapat disimpan. Coba lagi.';
+    return l10n.periodFormSaveFailed;
   }
 }

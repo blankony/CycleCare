@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
 import '../../../domain/entities/cycle_insights.dart';
+import '../../../l10n/app_localizations.dart';
 import 'widgets/summary_sections.dart';
 
 class SummaryPage extends ConsumerWidget {
@@ -14,20 +15,20 @@ class SummaryPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final summary = ref.watch(endOfCycleSummaryProvider(periodId));
     final action = ref.watch(periodActionsProvider);
 
     return Scaffold(
-      appBar: const CycleCareAppBar(title: 'Ringkasan siklus'),
+      appBar: CycleCareAppBar(title: l10n.historyPersonalStats),
       body: CycleCareBackground(
         child: summary.when(
-          loading: () => const CycleCareLoadingState(
-            message: 'Menyiapkan ringkasan siklusmu...',
+          loading: () => CycleCareLoadingState(
+            message: l10n.historyPreparing,
             cardCount: 4,
           ),
           error: (_, __) => CycleCareErrorState(
-            message:
-                'Ringkasan belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+            message: l10n.historyLoadFailed,
             onRetry: () => ref.invalidate(
               endOfCycleSummaryProvider(periodId),
             ),
@@ -35,13 +36,12 @@ class SummaryPage extends ConsumerWidget {
           data: (value) => value == null
               ? EmptyState(
                   icon: Icons.article_outlined,
-                  title: 'Ringkasan tidak ditemukan',
-                  message:
-                      'Catatan ini mungkin sudah diarsipkan atau tidak lagi tersedia.',
+                  title: l10n.historyEmptyTitle,
+                  message: l10n.historyEmptyMessage,
                   action: OutlinedButton.icon(
                     onPressed: () => context.go('/history'),
                     icon: const Icon(Icons.history_rounded),
-                    label: const Text('Kembali ke riwayat'),
+                    label: Text(l10n.commonBackToHistory),
                   ),
                 )
               : CycleSummaryContent(
@@ -63,21 +63,20 @@ class SummaryPage extends ConsumerWidget {
     WidgetRef ref,
     EndOfCycleSummary value,
   ) async {
+    final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Arsipkan catatan?'),
-        content: const Text(
-          'Catatan tidak dihapus permanen dan dapat dipulihkan dari Pengaturan.',
-        ),
+        title: Text(l10n.historyArchiveTitle),
+        content: Text(l10n.historyArchiveMessage),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Batal'),
+            child: Text(l10n.commonCancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Arsipkan'),
+            child: Text(l10n.historyArchiveAction),
           ),
         ],
       ),
@@ -90,11 +89,7 @@ class SummaryPage extends ConsumerWidget {
     final result = ref.read(periodActionsProvider);
     if (result.hasError) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Catatan belum dapat diarsipkan. Coba lagi tanpa mengubah data lain.',
-          ),
-        ),
+        SnackBar(content: Text(l10n.periodFormSaveFailed)),
       );
       return;
     }

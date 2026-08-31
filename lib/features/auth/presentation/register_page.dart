@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/providers.dart';
 import '../../../data/repositories/auth_repository.dart';
+import '../../../l10n/app_localizations.dart';
 
 class RegisterPage extends ConsumerStatefulWidget {
   const RegisterPage({super.key});
@@ -30,7 +31,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -45,7 +48,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Buat akun CycleCare',
+                    l10n.authRegisterTitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
@@ -55,11 +58,11 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: l10n.authEmailLabel),
                     validator: (value) {
                       final email = value?.trim() ?? '';
                       if (email.isEmpty || !email.contains('@')) {
-                        return 'Masukkan email yang valid.';
+                        return l10n.authInvalidEmail;
                       }
                       return null;
                     },
@@ -70,10 +73,10 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     obscureText: true,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.newPassword],
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: InputDecoration(labelText: l10n.authPasswordLabel),
                     validator: (value) {
                       if ((value ?? '').length < 6) {
-                        return 'Password minimal 6 karakter.';
+                        return l10n.authPasswordMin;
                       }
                       return null;
                     },
@@ -85,9 +88,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                     textInputAction: TextInputAction.done,
                     autofillHints: const [AutofillHints.newPassword],
                     decoration:
-                        const InputDecoration(labelText: 'Ulangi password'),
+                        InputDecoration(labelText: l10n.authPasswordRepeatLabel),
                     validator: (value) =>
-                        value != _password.text ? 'Password tidak sama.' : null,
+                        value != _password.text ? l10n.authPasswordMismatch : null,
                     onFieldSubmitted: (_) => _submit(),
                   ),
                   const SizedBox(height: 20),
@@ -98,12 +101,12 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
                             dimension: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Daftar'),
+                        : Text(l10n.authRegisterAction),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed: _isLoading ? null : () => context.go('/login'),
-                    child: const Text('Sudah punya akun? Masuk'),
+                    child: Text(l10n.authHaveAccount),
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 12),
@@ -121,6 +124,7 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
           ),
         ),
       );
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -144,8 +148,9 @@ class _RegisterPageState extends ConsumerState<RegisterPage> {
       if (mounted) setState(() => _message = error.message);
     } catch (_) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _message = 'Proses gagal. Periksa koneksi lalu coba lagi.';
+          _message = l10n.authGenericFailure;
         });
       }
     } finally {

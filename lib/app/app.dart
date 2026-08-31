@@ -2,6 +2,10 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:intl/intl.dart';
+
+import '../l10n/app_localizations.dart';
+import 'locale_provider.dart';
 import 'providers.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -48,12 +52,19 @@ class _CycleCareAppState extends ConsumerState<CycleCareApp>
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        title: 'CycleCare',
-        debugShowCheckedModeBanner: false,
-        theme: CycleCareTheme.light(),
-        darkTheme: CycleCareTheme.dark(),
-        themeMode: ThemeMode.system,
-        routerConfig: ref.watch(routerProvider),
-      );
+  Widget build(BuildContext context) {
+    final locale = ref.watch(appLocaleProvider);
+    Intl.defaultLocale = locale.languageCode == 'id' ? 'id_ID' : 'en';
+    return MaterialApp.router(
+      title: 'CycleCare',
+      debugShowCheckedModeBanner: false,
+      theme: CycleCareTheme.light(),
+      darkTheme: CycleCareTheme.dark(),
+      themeMode: ThemeMode.system,
+      routerConfig: ref.watch(routerProvider),
+      locale: locale,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+    );
+  }
 }

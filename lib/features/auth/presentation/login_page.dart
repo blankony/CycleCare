@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../../app/providers.dart';
+import '../../../l10n/app_localizations.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
   const LoginPage({this.registrationComplete = false, super.key});
@@ -26,8 +27,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   void initState() {
     super.initState();
     if (widget.registrationComplete) {
-      _message =
-          'Pendaftaran berhasil. Periksa email untuk konfirmasi, lalu masuk.';
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
+        setState(() => _message = l10n.authRegisteredSuccess);
+      });
     }
   }
 
@@ -39,7 +43,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(20),
@@ -54,7 +60,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Masuk ke CycleCare',
+                    l10n.authLoginTitle,
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
@@ -64,11 +70,11 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     keyboardType: TextInputType.emailAddress,
                     textInputAction: TextInputAction.next,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(labelText: 'Email'),
+                    decoration: InputDecoration(labelText: l10n.authEmailLabel),
                     validator: (value) {
                       final email = value?.trim() ?? '';
                       if (email.isEmpty || !email.contains('@')) {
-                        return 'Masukkan email yang valid.';
+                        return l10n.authInvalidEmail;
                       }
                       return null;
                     },
@@ -79,10 +85,10 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                     obscureText: true,
                     textInputAction: TextInputAction.done,
                     autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(labelText: 'Password'),
+                    decoration: InputDecoration(labelText: l10n.authPasswordLabel),
                     validator: (value) {
                       if ((value ?? '').length < 6) {
-                        return 'Password minimal 6 karakter.';
+                        return l10n.authPasswordMin;
                       }
                       return null;
                     },
@@ -96,13 +102,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                             dimension: 20,
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
-                        : const Text('Masuk'),
+                        : Text(l10n.authLoginAction),
                   ),
                   const SizedBox(height: 8),
                   TextButton(
                     onPressed:
                         _isLoading ? null : () => context.push('/register'),
-                    child: const Text('Belum punya akun? Daftar'),
+                    child: Text(l10n.authNoAccount),
                   ),
                   if (_message != null) ...[
                     const SizedBox(height: 12),
@@ -122,6 +128,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
           ),
         ),
       );
+  }
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
@@ -145,8 +152,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
       }
     } catch (_) {
       if (mounted) {
+        final l10n = AppLocalizations.of(context);
         setState(() {
-          _message = 'Proses gagal. Periksa koneksi lalu coba lagi.';
+          _message = l10n.authGenericFailure;
           _messageIsError = true;
         });
       }

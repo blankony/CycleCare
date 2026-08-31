@@ -6,17 +6,20 @@ import '../../../../app/design/cycle_care_design.dart';
 import '../../../../app/widgets.dart';
 import '../../../../domain/entities/cycle_insights.dart';
 import '../../../../domain/entities/enums.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class StatisticsInsufficientState extends StatelessWidget {
   const StatisticsInsufficientState({super.key});
 
   @override
-  Widget build(BuildContext context) => const EmptyState(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return EmptyState(
         icon: Icons.data_usage_outlined,
-        title: 'Data belum cukup',
-        message:
-            'Diperlukan setidaknya dua siklus yang telah selesai untuk menampilkan statistik yang bermakna.',
+        title: l10n.homeInsufficientDataTitle,
+        message: l10n.homeInsufficientDataBody,
       );
+  }
 }
 
 class StatisticsContent extends StatelessWidget {
@@ -25,7 +28,8 @@ class StatisticsContent extends StatelessWidget {
   final CycleStatistics value;
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) {
+    return ListView(
         padding: const EdgeInsets.fromLTRB(
           CycleCareSpacing.page,
           CycleCareSpacing.md,
@@ -40,7 +44,7 @@ class StatisticsContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
-                    'Berdasarkan ${value.cycleLengthSamples} siklus terakhir',
+                    'Based on ${value.cycleLengthSamples} cycles',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: context.cycleCareColors.textSecondary,
@@ -66,6 +70,7 @@ class StatisticsContent extends StatelessWidget {
           ),
         ],
       );
+  }
 }
 
 class _HeroMetrics extends StatelessWidget {
@@ -80,13 +85,13 @@ class _HeroMetrics extends StatelessWidget {
             _MetricCard(
               icon: Icons.repeat_rounded,
               value: _decimal(value.averageCycleLength),
-              label: 'Rata-rata panjang siklus',
+              label: 'Avg cycle length',
               accent: CycleCareColors.period,
             ),
             _MetricCard(
               icon: Icons.water_drop_outlined,
               value: _decimal(value.averagePeriodDuration),
-              label: 'Rata-rata durasi period',
+              label: 'Avg period duration',
               accent: CycleCareColors.period,
             ),
           ];
@@ -165,14 +170,14 @@ class _CycleRangeCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _CompactMetric(
-                  label: 'Siklus terpendek',
+                  label: 'Shortest cycle',
                   value: _days(value.shortestCycle),
                 ),
               ),
               VerticalDivider(color: context.cycleCareColors.divider),
               Expanded(
                 child: _CompactMetric(
-                  label: 'Siklus terpanjang',
+                  label: 'Longest cycle',
                   value: _days(value.longestCycle),
                 ),
               ),
@@ -272,24 +277,24 @@ class _RecentCycleChart extends StatelessWidget {
     final maximum = values.reduce(math.max);
     final scaleMaximum = math.max(30, ((maximum + 9) ~/ 10) * 10);
     final summary = values.indexed
-        .map((entry) => 'Siklus ${entry.$1 + 1}, ${entry.$2} hari')
+        .map((entry) => 'Cycle ${entry.$1 + 1}, ${entry.$2} days')
         .join('. ');
 
     return CycleCareCard(
       child: Semantics(
         container: true,
         label:
-            'Riwayat panjang siklus. Skala dimulai dari nol hingga $scaleMaximum hari. $summary.',
+            'Cycle length history. Scale 0 to $scaleMaximum days. $summary.',
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Riwayat panjang siklus',
+              'Cycle length history',
               style: Theme.of(context).textTheme.titleLarge,
             ),
             const SizedBox(height: CycleCareSpacing.xxs),
             Text(
-              'Tiga panjang siklus valid paling baru. Skala dimulai dari 0 hari.',
+              'Three most recent valid cycle lengths. Scale starts at 0.',
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                     color: context.cycleCareColors.textSecondary,
                   ),
@@ -364,7 +369,7 @@ class _CycleBar extends StatelessWidget {
         ),
         const SizedBox(height: CycleCareSpacing.xs),
         Text(
-          highlighted ? 'Terbaru' : 'Siklus ${index + 1}',
+          highlighted ? 'Latest' : 'Cycle ${index + 1}',
           textAlign: TextAlign.center,
           style: Theme.of(context).textTheme.bodySmall,
         ),
@@ -393,14 +398,14 @@ class _FlowDistribution extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Intensitas aliran',
+            'Flow intensity',
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: CycleCareSpacing.xxs),
           Text(
             total < 3
-                ? 'Catat aliran harian pada beberapa hari untuk melihat distribusi.'
-                : 'Berdasarkan $total catatan aliran harian.',
+                ? 'Log daily flow for a few days to see distribution.'
+                : 'Based on $total flow records.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.cycleCareColors.textSecondary,
                 ),
@@ -439,7 +444,7 @@ class _FlowPercentageRow extends StatelessWidget {
     final fraction = count / total;
     final percentage = (fraction * 100).round();
     return Semantics(
-      label: '${flow.label}, $percentage persen, $count dari $total catatan',
+      label: '${flow.label}, $percentage%, $count of $total',
       child: Row(
         children: [
           SizedBox(
@@ -495,9 +500,9 @@ class _MethodologyCard extends StatelessWidget {
             const SizedBox(width: CycleCareSpacing.sm),
             Expanded(
               child: Text(
-                'Statistik dihitung dari hingga 12 period terbaru yang valid. '
-                'Saat ini tersedia ${value.cycleLengthSamples} panjang siklus '
-                'dan ${value.periodDurationSamples} durasi period.',
+                'Statistics use up to 12 most recent valid periods. '
+                'Currently ${value.cycleLengthSamples} cycle lengths '
+                'and ${value.periodDurationSamples} period durations.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -506,24 +511,24 @@ class _MethodologyCard extends StatelessWidget {
       );
 }
 
-String _days(int? value) => value == null ? 'Belum ada' : '$value hari';
+String _days(int? value) => value == null ? '—' : '$value days';
 
 String _decimal(double? value) =>
-    value == null ? 'Belum ada' : '${value.toStringAsFixed(1)} hari';
+    value == null ? '—' : '${value.toStringAsFixed(1)} days';
 
 String _patternDescription(CycleStatistics value) {
   final variability = value.cycleVariability;
   return switch (value.pattern) {
     CyclePattern.consistent => variability == null
-        ? 'Panjang siklus memiliki variasi yang kecil.'
-        : 'Variasi median ${variability.toStringAsFixed(1)} hari, sehingga pola terbaru relatif stabil.',
+        ? 'Cycle length shows small variation.'
+        : 'Median variability ${variability.toStringAsFixed(1)} days, recent pattern relatively stable.',
     CyclePattern.variable => variability == null
-        ? 'Panjang siklus menunjukkan beberapa variasi.'
-        : 'Variasi median ${variability.toStringAsFixed(1)} hari. Perubahan antar-siklus masih dapat terjadi.',
+        ? 'Cycle length shows some variation.'
+        : 'Median variability ${variability.toStringAsFixed(1)} days. Changes between cycles may occur.',
     CyclePattern.highlyVariable => variability == null
-        ? 'Panjang siklus menunjukkan variasi yang lebih besar.'
-        : 'Variasi median ${variability.toStringAsFixed(1)} hari. Gunakan pola ini sebagai gambaran, bukan kepastian.',
+        ? 'Cycle length shows larger variation.'
+        : 'Median variability ${variability.toStringAsFixed(1)} days. Use as overview, not certainty.',
     CyclePattern.insufficientData =>
-      'Belum cukup panjang siklus untuk menjelaskan variasi.',
+      'Not enough cycle lengths to describe variation.',
   };
 }

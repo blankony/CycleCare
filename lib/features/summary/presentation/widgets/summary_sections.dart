@@ -6,6 +6,7 @@ import '../../../../core/date/date_only.dart';
 import '../../../../domain/entities/cycle_insights.dart';
 import '../../../../domain/entities/enums.dart';
 import '../../../../domain/entities/period_record.dart';
+import '../../../../l10n/app_localizations.dart';
 
 class CycleSummaryContent extends StatelessWidget {
   const CycleSummaryContent({
@@ -22,7 +23,9 @@ class CycleSummaryContent extends StatelessWidget {
   final VoidCallback onArchive;
 
   @override
-  Widget build(BuildContext context) => ListView(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return ListView(
         padding: const EdgeInsets.fromLTRB(
           CycleCareSpacing.page,
           CycleCareSpacing.md,
@@ -53,7 +56,7 @@ class CycleSummaryContent extends StatelessWidget {
                   FilledButton.icon(
                     onPressed: isArchiving ? null : onEdit,
                     icon: const Icon(Icons.edit_outlined),
-                    label: const Text('Edit data'),
+                    label: Text(l10n.commonEdit),
                   ),
                   const SizedBox(height: CycleCareSpacing.sm),
                   Divider(color: context.cycleCareColors.divider),
@@ -67,7 +70,7 @@ class CycleSummaryContent extends StatelessWidget {
                           )
                         : const Icon(Icons.archive_outlined),
                     label: Text(
-                      isArchiving ? 'Mengarsipkan...' : 'Arsipkan catatan',
+                      isArchiving ? 'Archiving...' : l10n.commonArchive,
                     ),
                   ),
                 ],
@@ -76,6 +79,7 @@ class CycleSummaryContent extends StatelessWidget {
           ),
         ],
       );
+  }
 }
 
 class _RecordedHeader extends StatelessWidget {
@@ -85,25 +89,26 @@ class _RecordedHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final duration = period.periodDurationDays;
     return Semantics(
       container: true,
       label: [
-        'Data tercatat',
-        _dateRange(period),
-        if (duration != null) 'Durasi $duration hari',
+        l10n.historyRecordedChip,
+        _dateRange(context, period),
+        if (duration != null) l10n.historyDaysChip(duration),
       ].join('. '),
       child: CycleCareCard(
         child: Column(
           children: [
-            const CycleCareStatusChip(
-              label: 'Tercatat',
+            CycleCareStatusChip(
+              label: l10n.historyRecordedChip,
               icon: Icons.verified_outlined,
               tone: CycleCareStatusTone.success,
             ),
             const SizedBox(height: CycleCareSpacing.md),
             Text(
-              duration == null ? 'Period selesai' : '$duration hari',
+              duration == null ? l10n.historyRecordedChip : l10n.historyDaysChip(duration),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                     fontWeight: FontWeight.w800,
@@ -111,7 +116,7 @@ class _RecordedHeader extends StatelessWidget {
             ),
             const SizedBox(height: CycleCareSpacing.xxs),
             Text(
-              _dateRange(period),
+              _dateRange(context, period),
               textAlign: TextAlign.center,
               style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: context.cycleCareColors.textSecondary,
@@ -151,13 +156,13 @@ class _CycleInsightCard extends StatelessWidget {
               children: [
                 Text(
                   cycleLength == null
-                      ? 'Panjang siklus belum tersedia'
-                      : 'Siklus $cycleLength hari',
+                      ? 'Cycle length not available'
+                      : 'Cycle $cycleLength days',
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: CycleCareSpacing.xxs),
                 Text(
-                  'Wawasan ini dihitung dari jarak ke awal period sebelumnya.',
+                  'Calculated from previous period start distance.',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color: context.cycleCareColors.textSecondary,
                       ),
@@ -190,12 +195,12 @@ class _FlowBreakdown extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Aliran darah', style: Theme.of(context).textTheme.titleLarge),
+          Text('Blood flow', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: CycleCareSpacing.xxs),
           Text(
             flowCounts.isEmpty
-                ? 'Belum ada aliran harian yang dicatat.'
-                : 'Jumlah hari tercatat untuk setiap tingkat aliran.',
+                ? 'No daily flow recorded.'
+                : 'Days recorded per flow level.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.cycleCareColors.textSecondary,
                 ),
@@ -229,9 +234,10 @@ class _FlowRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final fraction = maximum == 0 ? 0.0 : days / maximum;
     return Semantics(
-      label: '${flow.label}, $days hari',
+      label: '${flow.label}, ${l10n.historyDaysChip(days)}',
       child: Row(
         children: [
           SizedBox(
@@ -259,7 +265,7 @@ class _FlowRow extends StatelessWidget {
           SizedBox(
             width: 48,
             child: Text(
-              '$days hari',
+              l10n.historyDaysChip(days),
               textAlign: TextAlign.end,
               style: Theme.of(context).textTheme.labelMedium,
             ),
@@ -291,12 +297,12 @@ class _NotesCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Catatan', style: Theme.of(context).textTheme.titleMedium),
+                Text('Notes', style: Theme.of(context).textTheme.titleMedium),
                 const SizedBox(height: CycleCareSpacing.xxs),
                 Text(
                   hasNotes
                       ? notes!.trim()
-                      : 'Tidak ada catatan untuk period ini.',
+                      : 'No notes for this period.',
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: hasNotes
                             ? null
@@ -327,12 +333,12 @@ class _ComparisonCard extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  'Perbandingan pribadi',
+                  'Personal comparison',
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
               ),
               const CycleCareStatusChip(
-                label: 'Wawasan',
+                label: 'Insight',
                 icon: Icons.insights_outlined,
                 tone: CycleCareStatusTone.info,
               ),
@@ -373,7 +379,7 @@ class _HealthContextCard extends StatelessWidget {
             const SizedBox(width: CycleCareSpacing.sm),
             Expanded(
               child: Text(
-                'Jika perubahan ini berulang, mengkhawatirkan, atau mengganggu aktivitas, pertimbangkan berbicara dengan tenaga kesehatan.',
+                'If this change repeats or is concerning, consider talking to a healthcare professional.',
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
@@ -382,14 +388,15 @@ class _HealthContextCard extends StatelessWidget {
       );
 }
 
-String _dateRange(PeriodRecord period) {
+String _dateRange(BuildContext context, PeriodRecord period) {
+  final l10n = AppLocalizations.of(context);
   final end = period.endDate;
-  if (end == null) return 'Mulai ${DateOnly.display(period.startDate)}';
+  if (end == null) return l10n.calendarStartOngoing(DateOnly.display(period.startDate, l10n.localeName));
   if (period.startDate.year == end.year &&
       period.startDate.month == end.month) {
-    return '${period.startDate.day}\u2013${DateOnly.display(end)}';
+    return '${period.startDate.day}\u2013${DateOnly.display(end, l10n.localeName)}';
   }
-  return '${DateOnly.display(period.startDate)}\u2013${DateOnly.display(end)}';
+  return '${DateOnly.display(period.startDate, l10n.localeName)}\u2013${DateOnly.display(end, l10n.localeName)}';
 }
 
 String _comparisonText({
@@ -398,15 +405,15 @@ String _comparisonText({
   required double? difference,
 }) {
   if (cycleLength == null || average == null || difference == null) {
-    return 'Belum cukup riwayat sebelumnya untuk membuat perbandingan yang bermakna.';
+    return 'Not enough previous history for a meaningful comparison.';
   }
 
   final absoluteDifference = difference.abs();
   final relation = absoluteDifference < 0.5
-      ? 'hampir sama dengan'
+      ? 'almost the same as'
       : difference > 0
-          ? '${absoluteDifference.toStringAsFixed(1)} hari lebih panjang dari'
-          : '${absoluteDifference.toStringAsFixed(1)} hari lebih pendek dari';
-  return 'Siklus ini $relation rata-rata sebelumnya '
-      '(${average.toStringAsFixed(1)} hari).';
+          ? '${absoluteDifference.toStringAsFixed(1)} days longer than'
+          : '${absoluteDifference.toStringAsFixed(1)} days shorter than';
+  return 'This cycle is $relation previous average '
+      '(${average.toStringAsFixed(1)} days).';
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../l10n/app_localizations.dart';
 import '../design/cycle_care_design.dart';
 import 'cycle_care_card.dart';
 
@@ -57,7 +58,7 @@ class EmptyState extends StatelessWidget {
 
 class CycleCareLoadingState extends StatelessWidget {
   const CycleCareLoadingState({
-    this.message = 'Menyiapkan siklusmu…',
+    this.message = 'Preparing your cycle…',
     this.cardCount = 3,
     super.key,
   });
@@ -123,25 +124,28 @@ class CycleCareErrorState extends StatelessWidget {
   const CycleCareErrorState({
     required this.message,
     required this.onRetry,
-    this.title = 'Data belum dapat dimuat',
+    this.title,
     super.key,
   });
 
-  final String title;
+  final String? title;
   final String message;
   final VoidCallback onRetry;
 
   @override
-  Widget build(BuildContext context) => EmptyState(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return EmptyState(
         icon: Icons.cloud_off_outlined,
-        title: title,
+        title: title ?? l10n.homeInsufficientDataTitle,
         message: message,
         action: FilledButton.icon(
           onPressed: onRetry,
           icon: const Icon(Icons.refresh),
-          label: const Text('Coba lagi'),
+          label: Text(l10n.commonRetry),
         ),
       );
+  }
 }
 
 class CycleCareOfflineState extends StatelessWidget {
@@ -157,7 +161,7 @@ class CycleCareOfflineState extends StatelessWidget {
   @override
   Widget build(BuildContext context) => EmptyState(
         icon: Icons.cloud_off_outlined,
-        title: 'Kamu sedang offline',
+        title: 'Offline',
         message: message,
         action: action,
       );

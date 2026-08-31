@@ -16,6 +16,7 @@ import '../../../domain/entities/period_record.dart';
 import '../../../domain/entities/prediction.dart';
 import '../../../domain/entities/sync_state.dart';
 import '../../../domain/entities/user_cycle_settings.dart';
+import '../../../l10n/app_localizations.dart';
 import 'widgets/cycle_ring.dart';
 
 class DashboardPage extends ConsumerWidget {
@@ -23,6 +24,7 @@ class DashboardPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final periods = ref.watch(activePeriodsProvider);
     final prediction = ref.watch(predictionProvider).valueOrNull;
     final settings = ref.watch(userCycleSettingsProvider).valueOrNull;
@@ -38,7 +40,7 @@ class DashboardPage extends ConsumerWidget {
                   ? error.message
                   : error.toString().isNotEmpty
                       ? error.toString()
-                      : 'Perubahan belum dapat disimpan. Data sebelumnya tetap aman.',
+                      : l10n.periodFormSaveFailed,
             ),
           ),
         ),
@@ -48,11 +50,11 @@ class DashboardPage extends ConsumerWidget {
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: CycleCareAppBar(
-        title: 'CycleCare',
+        title: l10n.appTitle,
         centerTitle: true,
         actions: [
           IconButton(
-            tooltip: 'Buka akun dan pengaturan',
+            tooltip: l10n.tooltipOpenAccount,
             onPressed: () => context.go('/settings'),
             icon: const Icon(Icons.account_circle_outlined),
           ),
@@ -60,10 +62,9 @@ class DashboardPage extends ConsumerWidget {
       ),
       body: CycleCareBackground(
         child: periods.when(
-          loading: () => const CycleCareLoadingState(),
+          loading: () => CycleCareLoadingState(message: l10n.loadingPreparingCycle),
           error: (_, __) => CycleCareErrorState(
-            message:
-                'Data lokalmu tetap aman. Coba muat kembali untuk menampilkan catatan terbaru.',
+            message: l10n.errorDataSafeRetry,
             onRetry: () {
               ref.invalidate(activePeriodsProvider);
               ref.invalidate(cycleInsightsProvider);
@@ -110,11 +111,13 @@ class _DashboardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final showFertile = settings?.showFertileWindow == true;
     final showOvulation = settings?.showOvulationEstimate == true;
     final ongoing =
         records.where((record) => record.endDate == null).firstOrNull;
     final timelineData = _buildTimelineData(
+      context: context,
       records: records,
       prediction: prediction,
       insights: insights,
@@ -169,10 +172,9 @@ class _DashboardContent extends StatelessWidget {
                         showPrediction: prediction?.ready == true,
                       ),
                       const SizedBox(height: CycleCareSpacing.xxl),
-                      const CycleCareSectionHeader(
-                        title: 'Perkiraan siklus',
-                        subtitle:
-                            'Tanggal dapat berubah mengikuti catatan terbaru.',
+                      CycleCareSectionHeader(
+                        title: l10n.homeSectionCycleForecast,
+                        subtitle: l10n.homeSectionForecastSubtitle,
                       ),
                       const SizedBox(height: CycleCareSpacing.md),
                       _PhaseCards(
@@ -211,7 +213,8 @@ class _DashboardHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = _syncChip(syncSnapshot.status);
+    final l10n = AppLocalizations.of(context);
+    final status = _syncChip(l10n, syncSnapshot.status);
     return CycleCareStatusChip(
       label: status.label,
       icon: status.icon,
@@ -219,29 +222,30 @@ class _DashboardHeader extends StatelessWidget {
     );
   }
 
-  _HeaderStatus _syncChip(SyncGateStatus status) => switch (status) {
-        SyncGateStatus.ready => const _HeaderStatus(
-            label: 'Tersinkron',
+  _HeaderStatus _syncChip(AppLocalizations l10n, SyncGateStatus status) =>
+      switch (status) {
+        SyncGateStatus.ready => _HeaderStatus(
+            label: l10n.statusSynced,
             icon: Icons.cloud_done_outlined,
             tone: CycleCareStatusTone.success,
           ),
-        SyncGateStatus.synchronizing => const _HeaderStatus(
-            label: 'Menyinkronkan',
+        SyncGateStatus.synchronizing => _HeaderStatus(
+            label: l10n.statusSyncing,
             icon: Icons.sync_rounded,
             tone: CycleCareStatusTone.info,
           ),
-        SyncGateStatus.offlineReady => const _HeaderStatus(
-            label: 'Offline',
+        SyncGateStatus.offlineReady => _HeaderStatus(
+            label: l10n.statusOffline,
             icon: Icons.cloud_off_outlined,
             tone: CycleCareStatusTone.warning,
           ),
-        SyncGateStatus.failed => const _HeaderStatus(
-            label: 'Perlu sinkronisasi',
+        SyncGateStatus.failed => _HeaderStatus(
+            label: l10n.statusSyncNeeded,
             icon: Icons.sync_problem_rounded,
             tone: CycleCareStatusTone.error,
           ),
-        _ => const _HeaderStatus(
-            label: 'Tersimpan di perangkat',
+        _ => _HeaderStatus(
+            label: l10n.statusSavedOnDevice,
             icon: Icons.smartphone_rounded,
             tone: CycleCareStatusTone.neutral,
           ),
@@ -275,9 +279,10 @@ class _CycleHeroCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final status = insights?.status;
     final currentCycleDay = status?.currentCycleDay;
-    final predictionRange = _predictionRange(prediction);
+    final predictionRange = _predictionRange(context, prediction);
     final empty = records.isEmpty;
     final colors = context.cycleCareColors;
 
@@ -285,7 +290,7 @@ class _CycleHeroCard extends StatelessWidget {
       color: Theme.of(context).brightness == Brightness.dark
           ? CycleCareColors.darkSurface
           : CycleCareColors.surface,
-      semanticLabel: _heroSemanticLabel(
+      semanticLabel: _heroSemanticLabel(context,
         status: status,
         prediction: prediction,
         empty: empty,
@@ -302,7 +307,7 @@ class _CycleHeroCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Hari ini',
+                      l10n.homeToday,
                       style: Theme.of(context).textTheme.labelMedium?.copyWith(
                             color: colors.textSecondary,
                           ),
@@ -310,10 +315,10 @@ class _CycleHeroCard extends StatelessWidget {
                     const SizedBox(height: CycleCareSpacing.xxs),
                     Text(
                       empty
-                          ? 'Mulai catatanmu'
+                          ? l10n.homeStartYourLog
                           : currentCycleDay == null
-                              ? 'Data bertambah'
-                              : 'Hari $currentCycleDay',
+                              ? l10n.homeDataGrowing
+                              : l10n.homeDayOfCycle(currentCycleDay),
                       style: Theme.of(context)
                           .textTheme
                           .displayMedium
@@ -323,7 +328,7 @@ class _CycleHeroCard extends StatelessWidget {
                     ),
                     const SizedBox(height: CycleCareSpacing.xs),
                     Text(
-                      _cycleStatusLabel(status, insights?.fertility),
+                      _cycleStatusLabel(context, status, insights?.fertility),
                       style: Theme.of(context).textTheme.bodyLarge,
                     ),
                   ],
@@ -332,10 +337,10 @@ class _CycleHeroCard extends StatelessWidget {
               if (!empty)
                 CycleCareStatusChip(
                   label: status?.isLate == true
-                      ? 'Lewat perkiraan'
+                      ? l10n.homeChipLate
                       : ongoing == null
-                          ? 'Siklus aktif'
-                          : 'Period berlangsung',
+                          ? l10n.homeChipActiveCycle
+                          : l10n.homeChipPeriodOngoing,
                   icon: status?.isLate == true
                       ? Icons.schedule_rounded
                       : ongoing == null
@@ -362,7 +367,7 @@ class _CycleHeroCard extends StatelessWidget {
                 border: Border.all(color: colors.divider),
               ),
               child: Text(
-                'Terlambat ${status!.lateDays} hari dari rentang perkiraan',
+                l10n.homeLateByDays(status!.lateDays),
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: CycleCareColors.warning,
                       fontWeight: FontWeight.w700,
@@ -396,19 +401,19 @@ class _CycleHeroCard extends StatelessWidget {
                     children: [
                       Text(
                         empty
-                            ? 'Belum ada perkiraan period'
-                            : 'Perkiraan period berikutnya',
+                            ? l10n.homeNoPeriodEstimate
+                            : l10n.homeNextPeriodEstimate,
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
                       const SizedBox(height: CycleCareSpacing.xxs),
                       Text(
-                        predictionRange ?? 'Catat beberapa siklus dahulu',
+                        predictionRange ?? l10n.homeLogAFewCycles,
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       if (prediction?.ready == true) ...[
                         const SizedBox(height: CycleCareSpacing.xxs),
                         Text(
-                          'Berdasarkan ${prediction!.basedOnCycles} siklus • Keyakinan ${prediction!.confidence?.label.toLowerCase() ?? 'rendah'}',
+                          l10n.homeBasedOnCycles(prediction!.basedOnCycles, prediction!.confidence?.label.toLowerCase() ?? 'low'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -427,7 +432,7 @@ class _CycleHeroCard extends StatelessWidget {
               onPressed: () => context.push('/add-period', extra: ongoing),
               icon: Icon(
                   ongoing == null ? Icons.add_rounded : Icons.edit_rounded),
-              label: Text(ongoing == null ? 'Catat period' : 'Perbarui period'),
+              label: Text(ongoing == null ? l10n.actionRecordPeriod : l10n.actionUpdatePeriod),
             ),
           ),
         ],
@@ -435,23 +440,24 @@ class _CycleHeroCard extends StatelessWidget {
     );
   }
 
-  String _heroSemanticLabel({
+  String _heroSemanticLabel(BuildContext context, {
     required CycleStatus? status,
     required CyclePrediction? prediction,
     required bool empty,
   }) {
+    final l10n = AppLocalizations.of(context);
     if (empty) {
-      return 'Belum ada catatan siklus. Catat period untuk memulai.';
+      return l10n.semanticsCycleHeroEmpty;
     }
     return [
       if (status?.currentCycleDay != null)
-        'Hari ke-${status!.currentCycleDay} dari siklus.',
+        l10n.homeDayOfCycle(status!.currentCycleDay!),
       if (status?.currentMenstruationDay != null)
-        'Hari ke-${status!.currentMenstruationDay} period.',
+        l10n.homeCycleStatusPeriodDay(status!.currentMenstruationDay!),
       if (status?.isLate == true)
-        'Perkiraan period telah lewat ${status!.lateDays} hari.',
+        l10n.homeLateByDays(status!.lateDays),
       if (prediction?.windowStart != null && prediction?.windowEnd != null)
-        'Perkiraan period berikutnya ${DateOnly.display(prediction!.windowStart!)} sampai ${DateOnly.display(prediction.windowEnd!)}.',
+        '${l10n.homeNextPeriodEstimate} ${DateOnly.display(prediction!.windowStart!, l10n.localeName)} - ${DateOnly.display(prediction.windowEnd!, l10n.localeName)}.',
     ].join(' ');
   }
 }
@@ -470,13 +476,15 @@ class _CycleTimelineCard extends StatelessWidget {
   final bool showPrediction;
 
   @override
-  Widget build(BuildContext context) => CycleCareCard(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return CycleCareCard(
         padding: const EdgeInsets.all(CycleCareSpacing.lg),
         semanticLabel: data.semanticLabel,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Siklus saat ini',
+            Text(l10n.homeTimelineCurrentCycle,
                 style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: CycleCareSpacing.md),
             ExcludeSemantics(child: _CycleTimeline(data: data)),
@@ -485,27 +493,27 @@ class _CycleTimelineCard extends StatelessWidget {
               spacing: CycleCareSpacing.md,
               runSpacing: CycleCareSpacing.xs,
               children: [
-                const _TimelineLegend(
+                _TimelineLegend(
                   color: CycleCareColors.period,
-                  label: 'Period tercatat',
+                  label: l10n.homeTimelinePeriodRecorded,
                   icon: Icons.water_drop_rounded,
                 ),
                 if (showFertile)
-                  const _TimelineLegend(
+                  _TimelineLegend(
                     color: CycleCareColors.fertileStrong,
-                    label: 'Masa subur',
+                    label: l10n.homeTimelineFertile,
                     icon: Icons.blur_circular_rounded,
                   ),
                 if (showOvulation)
-                  const _TimelineLegend(
+                  _TimelineLegend(
                     color: CycleCareColors.ovulation,
-                    label: 'Ovulasi',
+                    label: l10n.homeTimelineOvulation,
                     icon: Icons.sunny_snowing,
                   ),
                 if (showPrediction)
-                  const _TimelineLegend(
+                  _TimelineLegend(
                     color: CycleCareColors.prediction,
-                    label: 'Period diperkirakan',
+                    label: l10n.homeTimelinePredictedPeriod,
                     icon: Icons.calendar_month_outlined,
                   ),
               ],
@@ -513,6 +521,7 @@ class _CycleTimelineCard extends StatelessWidget {
           ],
         ),
       );
+  }
 }
 
 class _CycleTimeline extends StatelessWidget {
@@ -642,6 +651,7 @@ class _PhaseCards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final cards = <Widget>[];
     if (showFertile && fertility != null) {
       cards.add(
@@ -649,11 +659,11 @@ class _PhaseCards extends StatelessWidget {
           icon: Icons.blur_circular_rounded,
           color: Theme.of(context).colorScheme.secondaryContainer,
           iconColor: Theme.of(context).colorScheme.onSecondaryContainer,
-          eyebrow: 'Perkiraan',
+          eyebrow: l10n.homeForthcoming,
           date:
-              '${_compactDate(fertility!.fertileWindowStart)}–${_compactDate(fertility!.fertileWindowEnd)}',
-          title: 'Masa subur',
-          subtitle: 'Keyakinan ${fertility!.confidence.label.toLowerCase()}',
+              '${_compactDate(context, fertility!.fertileWindowStart)}–${_compactDate(context, fertility!.fertileWindowEnd)}',
+          title: l10n.homePhaseFertile,
+          subtitle: l10n.homeConfidence(fertility!.confidence.label.toLowerCase()),
         ),
       );
     }
@@ -663,10 +673,10 @@ class _PhaseCards extends StatelessWidget {
           icon: Icons.sunny_snowing,
           color: Theme.of(context).colorScheme.tertiaryContainer,
           iconColor: Theme.of(context).colorScheme.onTertiaryContainer,
-          eyebrow: 'Perkiraan',
-          date: _compactDate(fertility!.ovulationCenter),
-          title: 'Perkiraan ovulasi',
-          subtitle: 'Rentang dapat berubah',
+          eyebrow: l10n.homeForthcoming,
+          date: _compactDate(context, fertility!.ovulationCenter),
+          title: l10n.homePhaseOvulationEstimate,
+          subtitle: l10n.homeRangeMayChange,
         ),
       );
     }
@@ -683,12 +693,12 @@ class _PhaseCards extends StatelessWidget {
           icon: Icons.update_rounded,
           color: CycleCareColors.iceBlue,
           iconColor: CycleCareColors.deepNavy,
-          eyebrow: 'Berikutnya',
-          date: _predictionRange(prediction)!,
-          title: 'Period berikutnya',
+          eyebrow: l10n.homeForthcoming,
+          date: _predictionRange(context, prediction)!,
+          title: l10n.homePhaseNextPeriod,
           subtitle: days >= 0
-              ? 'Sekitar $days hari lagi'
-              : 'Rentang perkiraan telah lewat',
+              ? l10n.homeInAboutDays(days)
+              : l10n.homePredictionRangePast,
         ),
       );
     }
@@ -708,13 +718,11 @@ class _PhaseCards extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Data belum cukup',
+                    l10n.homeInsufficientDataTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: CycleCareSpacing.xxs),
-                  const Text(
-                    'Catat beberapa siklus agar perkiraan menjadi lebih personal.',
-                  ),
+                  Text(l10n.homeInsufficientDataBody),
                 ],
               ),
             ),
@@ -803,17 +811,18 @@ class _RecentCyclesCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final recent = [...records]
       ..sort((first, second) => first.startDate.compareTo(second.startDate));
     final visible =
         recent.length > 3 ? recent.sublist(recent.length - 3) : recent;
     final average = statistics?.averageCycleLength;
     final summary = average == null
-        ? 'Catat siklus berikutnya untuk melihat pola pribadi.'
-        : 'Rata-rata siklusmu ${average.toStringAsFixed(1)} hari. Pola saat ini ${statistics!.pattern.label.toLowerCase()}.';
+        ? l10n.homePromptLogNext
+        : l10n.homeAverageCycle(average.toStringAsFixed(1), statistics!.pattern.label.toLowerCase());
 
     return CycleCareCard(
-      semanticLabel: 'Ringkasan ${visible.length} siklus terbaru. $summary',
+      semanticLabel: '${visible.isEmpty ? l10n.homeRecentSummaryGeneric : l10n.homeRecentSummaryTitle(visible.length)}. $summary',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -822,14 +831,14 @@ class _RecentCyclesCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   visible.isEmpty
-                      ? 'Ringkasan siklus'
-                      : 'Ringkasan ${visible.length} siklus',
+                      ? l10n.homeRecentSummaryGeneric
+                      : l10n.homeRecentSummaryTitle(visible.length),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
               TextButton(
                 onPressed: () => context.push('/statistics'),
-                child: const Text('Lihat statistik'),
+                child: Text(l10n.homeViewStatistics),
               ),
             ],
           ),
@@ -920,11 +929,17 @@ class _CycleBar extends StatelessWidget {
         ),
         const SizedBox(height: CycleCareSpacing.xs),
         Text(
-          DateFormat('MMM', 'id_ID').format(record.startDate),
+          _monthLabel(context, record.startDate),
           style: Theme.of(context).textTheme.labelMedium,
         ),
       ],
     );
+  }
+
+  String _monthLabel(BuildContext context, DateTime date) {
+    final locale = AppLocalizations.of(context).localeName;
+    final id = locale.startsWith('id') ? 'id_ID' : 'en';
+    return DateFormat('MMM', id).format(record.startDate);
   }
 }
 
@@ -935,6 +950,7 @@ class _QuickOngoingToggle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final busy = ref.watch(periodActionsProvider).isLoading;
     if (ongoing != null) {
       return OutlinedButton.icon(
@@ -945,7 +961,7 @@ class _QuickOngoingToggle extends ConsumerWidget {
                   await ref.read(periodActionsProvider.notifier).finish(ongoing!.id, DateTime.now());
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Period diselesaikan hari ini.')),
+                      SnackBar(content: Text(l10n.snackbarPeriodFinishedToday)),
                     );
                   }
                 } catch (e) {
@@ -957,7 +973,7 @@ class _QuickOngoingToggle extends ConsumerWidget {
                 }
               },
         icon: const Icon(Icons.stop_circle_outlined, size: 18),
-        label: const Text('Selesaikan hari ini'),
+        label: Text(l10n.calendarFinishPeriodToday),
       );
     }
     return OutlinedButton.icon(
@@ -968,7 +984,7 @@ class _QuickOngoingToggle extends ConsumerWidget {
                 await ref.read(periodActionsProvider.notifier).create(startDate: DateTime.now());
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Period dimulai hari ini.')),
+                    SnackBar(content: Text(l10n.snackbarPeriodStartedToday)),
                   );
                 }
               } catch (e) {
@@ -980,7 +996,7 @@ class _QuickOngoingToggle extends ConsumerWidget {
               }
             },
       icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
-      label: const Text('Mulai period hari ini'),
+      label: Text(l10n.actionStartPeriodToday),
     );
   }
 }
@@ -989,10 +1005,11 @@ class _FertilitySafetyNote extends StatelessWidget {
   const _FertilitySafetyNote();
 
   @override
-  Widget build(BuildContext context) => Semantics(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
         container: true,
-        label:
-            'Perkiraan masa subur tidak ditujukan sebagai metode kontrasepsi.',
+        label: l10n.homeFertilitySafety,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -1004,22 +1021,25 @@ class _FertilitySafetyNote extends StatelessWidget {
             const SizedBox(width: CycleCareSpacing.xs),
             Expanded(
               child: Text(
-                'Perkiraan masa subur tidak ditujukan sebagai metode kontrasepsi.',
+                l10n.homeFertilitySafety,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
           ],
         ),
       );
+  }
 }
 
 CycleRingData _buildTimelineData({
+  required BuildContext context,
   required List<PeriodRecord> records,
   required CyclePrediction? prediction,
   required CycleInsights? insights,
   required bool showFertile,
   required bool showOvulation,
 }) {
+  final l10n = AppLocalizations.of(context);
   final latest = records.isEmpty ? null : records.first;
   final status = insights?.status;
   final cycleStart = latest?.startDate;
@@ -1089,25 +1109,26 @@ CycleRingData _buildTimelineData({
     }
   }
 
+  String localeName = l10n.localeName;
   final semantics = <String>[
     if (status?.currentCycleDay != null)
-      'Hari ke-${status!.currentCycleDay} dari siklus.',
-    if (periodEnd != null) 'Period tercatat ditampilkan pada awal siklus.',
+      l10n.homeDayOfCycle(status!.currentCycleDay!),
+    if (periodEnd != null) l10n.homeTimelinePeriodRecorded,
     if (showFertile && fertility != null)
-      'Masa subur diperkirakan ${DateOnly.display(fertility.fertileWindowStart)} sampai ${DateOnly.display(fertility.fertileWindowEnd)}.',
+      '${l10n.homeTimelineFertile} ${DateOnly.display(fertility.fertileWindowStart, localeName)} - ${DateOnly.display(fertility.fertileWindowEnd, localeName)}.',
     if (showOvulation && fertility != null)
-      'Ovulasi diperkirakan ${DateOnly.display(fertility.ovulationCenter)}.',
+      '${l10n.homeTimelineOvulation} ${DateOnly.display(fertility.ovulationCenter, localeName)}.',
     if (prediction?.windowStart != null && prediction?.windowEnd != null)
-      'Period berikutnya diperkirakan ${DateOnly.display(prediction!.windowStart!)} sampai ${DateOnly.display(prediction.windowEnd!)}.',
+      '${l10n.homeTimelinePredictedPeriod} ${DateOnly.display(prediction!.windowStart!, localeName)} - ${DateOnly.display(prediction.windowEnd!, localeName)}.',
   ].join(' ');
 
   return CycleRingData(
     title: status?.currentCycleDay == null
-        ? 'Data belum cukup'
-        : 'Hari ke-${status!.currentCycleDay}',
-    subtitle: 'Siklus saat ini',
+        ? l10n.homeInsufficientDataTitle
+        : l10n.homeDayOfCycle(status!.currentCycleDay!),
+    subtitle: l10n.homeTimelineCurrentCycle,
     semanticLabel: semantics.isEmpty
-        ? 'Data belum cukup untuk menampilkan garis waktu siklus.'
+        ? l10n.homeInsufficientDataBody
         : semantics,
     todayProgress: fractionForDay(status?.currentCycleDay),
     ovulationProgress: showOvulation
@@ -1118,38 +1139,43 @@ CycleRingData _buildTimelineData({
 }
 
 String _cycleStatusLabel(
+  BuildContext context,
   CycleStatus? status,
   FertilityEstimate? fertility,
 ) {
+  final l10n = AppLocalizations.of(context);
   if (status?.currentMenstruationDay != null) {
-    return 'Hari ke-${status!.currentMenstruationDay} period';
+    return l10n.homeCycleStatusPeriodDay(status!.currentMenstruationDay!);
   }
   if (status?.isLate == true) {
-    return 'Perkiraan period telah lewat';
+    return l10n.homeCycleStatusLate;
   }
   final today = DateOnly.normalize(DateTime.now());
   if (fertility != null) {
     final fertileStart = DateOnly.normalize(fertility.fertileWindowStart);
     final fertileEnd = DateOnly.normalize(fertility.fertileWindowEnd);
     if (!today.isBefore(fertileStart) && !today.isAfter(fertileEnd)) {
-      return 'Dalam perkiraan masa subur';
+      return l10n.homeCycleStatusFertile;
     }
     if (today.isAfter(DateOnly.normalize(fertility.latestOvulation))) {
-      return 'Fase setelah perkiraan ovulasi';
+      return l10n.homeCycleStatusAfterOvulation;
     }
   }
-  if (status?.currentCycleDay != null) return 'Siklus sedang berjalan';
-  return 'Catat period pertama untuk memulai';
+  if (status?.currentCycleDay != null) return l10n.homeCycleStatusOngoing;
+  return l10n.homeCycleStatusEmpty;
 }
 
-String? _predictionRange(CyclePrediction? prediction) {
+String? _predictionRange(BuildContext context, CyclePrediction? prediction) {
   if (prediction?.ready != true ||
       prediction?.windowStart == null ||
       prediction?.windowEnd == null) {
     return null;
   }
-  return '${_compactDate(prediction!.windowStart!)}–${_compactDate(prediction.windowEnd!)}';
+  return '${_compactDate(context, prediction!.windowStart!)}–${_compactDate(context, prediction.windowEnd!)}';
 }
 
-String _compactDate(DateTime date) =>
-    DateFormat('d MMM', 'id_ID').format(DateOnly.normalize(date));
+String _compactDate(BuildContext context, DateTime date) {
+  final locale = AppLocalizations.of(context).localeName;
+  final id = locale.startsWith('id') ? 'id_ID' : 'en';
+  return DateFormat('d MMM', id).format(DateOnly.normalize(date));
+}

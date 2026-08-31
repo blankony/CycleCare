@@ -11,6 +11,7 @@ import '../../../core/date/date_only.dart';
 import '../../../domain/entities/cycle_insights.dart';
 import '../../../domain/entities/period_record.dart';
 import '../../../domain/entities/sync_state.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CalendarPage extends ConsumerStatefulWidget {
   const CalendarPage({super.key});
@@ -25,21 +26,21 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final periods = ref.watch(activePeriodsProvider);
     final prediction = ref.watch(predictionProvider);
     final settings = ref.watch(userCycleSettingsProvider);
 
     return Scaffold(
-      appBar: const CycleCareAppBar(title: 'Kalender'),
+      appBar: CycleCareAppBar(title: l10n.calendarTitle),
       body: CycleCareBackground(
         child: periods.when(
-          loading: () => const CycleCareLoadingState(
-            message: 'Menyiapkan kalender siklusmu…',
+          loading: () => CycleCareLoadingState(
+            message: l10n.calendarPreparing,
             cardCount: 2,
           ),
           error: (_, __) => CycleCareErrorState(
-            message:
-                'Kalender belum dapat dimuat. Data kesehatanmu tetap aman di perangkat.',
+            message: l10n.calendarLoadFailed,
             onRetry: () => ref.invalidate(activePeriodsProvider),
           ),
           data: (records) => _CalendarContent(
@@ -73,10 +74,10 @@ class _CalendarPageState extends ConsumerState<CalendarPage> {
         ),
       ),
       floatingActionButton: FloatingActionButton.extended(
-        tooltip: 'Catat period',
+        tooltip: l10n.tooltipRecordPeriod,
         onPressed: () => context.push('/add-period'),
         icon: const Icon(Icons.add_rounded),
-        label: const Text('Catat period'),
+        label: Text(l10n.actionRecordPeriod),
       ),
     );
   }
@@ -119,6 +120,7 @@ class _CalendarContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final events = _buildEvents(
       records,
       projections,
@@ -177,10 +179,10 @@ class _CalendarContent extends StatelessWidget {
                       preferencesLoading) ...[
                     _CalendarNotice(
                       message: predictionUnavailable
-                          ? 'Perkiraan belum dapat ditampilkan. Catatan period tetap tersedia.'
+                          ? l10n.calendarPredictionUnavailable
                           : preferencesUnavailable
-                              ? 'Pilihan masa subur belum dapat dimuat. Estimasi disembunyikan sementara.'
-                              : 'Perkiraan dan pilihan kalender sedang disiapkan.',
+                              ? l10n.calendarPreferencesUnavailable
+                              : l10n.calendarLoading,
                     ),
                     const SizedBox(height: CycleCareSpacing.md),
                   ],
@@ -234,7 +236,10 @@ class _CalendarCard extends StatelessWidget {
   final bool showOvulation;
 
   @override
-  Widget build(BuildContext context) => ClipRect(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locale = l10n.localeName.startsWith('id') ? 'id_ID' : 'en';
+    return ClipRect(
         child: CycleCareCard(
           padding: const EdgeInsets.fromLTRB(
             CycleCareSpacing.sm,
@@ -245,15 +250,15 @@ class _CalendarCard extends StatelessWidget {
           child: Column(
             children: [
               TableCalendar<int>(
-                    locale: 'id_ID',
+                    locale: locale,
                     firstDay: DateTime(2000),
                     lastDay: DateTime(2100),
                     focusedDay: focusedDay,
                     currentDay: DateOnly.normalize(DateTime.now()),
                     startingDayOfWeek: StartingDayOfWeek.monday,
                     availableGestures: AvailableGestures.none,
-                    availableCalendarFormats: const {
-                      CalendarFormat.month: 'Bulan',
+                    availableCalendarFormats: {
+                      CalendarFormat.month: l10n.calendarMonthFormat,
                     },
                     selectedDayPredicate: (day) => isSameDay(selectedDay, day),
                     eventLoader: (_) => const [0],
@@ -273,7 +278,7 @@ class _CalendarCard extends StatelessWidget {
                           const EdgeInsets.all(CycleCareSpacing.sm),
                       rightChevronPadding:
                           const EdgeInsets.all(CycleCareSpacing.sm),
-                      titleTextFormatter: (date, locale) =>
+                      titleTextFormatter: (date, _) =>
                           DateFormat('MMMM yyyy', locale).format(date),
                        titleTextStyle: Theme.of(context).textTheme.titleLarge!,
                     ),
@@ -286,7 +291,7 @@ class _CalendarCard extends StatelessWidget {
                     calendarBuilders: CalendarBuilders<int>(
                       dowBuilder: (context, day) => Center(
                         child: Text(
-                          DateFormat.E('id_ID').format(day).substring(0, 1),
+                          DateFormat.E(locale).format(day).substring(0, 1),
                           style: Theme.of(context)
                               .textTheme
                               .labelMedium
@@ -326,6 +331,7 @@ class _CalendarCard extends StatelessWidget {
                           button: true,
                           selected: isSameDay(day, selectedDay),
                           label: _daySemanticLabel(
+                            context,
                             day,
                             events[DateOnly.normalize(day)] ?? const [],
                             isToday: isSameDay(day, DateTime.now()),
@@ -347,6 +353,7 @@ class _CalendarCard extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 class _CalendarDay extends StatelessWidget {
@@ -524,31 +531,34 @@ class _Legend extends StatelessWidget {
   final bool showOvulation;
 
   @override
-  Widget build(BuildContext context) => Wrap(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Wrap(
         spacing: CycleCareSpacing.xs,
         runSpacing: CycleCareSpacing.xs,
         children: [
-          const _LegendItem(
-            label: 'Period tercatat',
+          _LegendItem(
+            label: l10n.calendarPeriodRecorded,
             type: _CalendarEventType.recorded,
           ),
-          const _LegendItem(
-            label: 'Perkiraan period',
+          _LegendItem(
+            label: l10n.calendarPredictedPeriod,
             type: _CalendarEventType.predicted,
           ),
           if (showFertile)
-            const _LegendItem(
-              label: 'Masa subur',
+            _LegendItem(
+              label: l10n.calendarFertileWindow,
               type: _CalendarEventType.fertile,
             ),
           if (showOvulation)
-            const _LegendItem(
-              label: 'Ovulasi',
+            _LegendItem(
+              label: l10n.calendarOvulation,
               type: _CalendarEventType.ovulation,
             ),
-          const _TodayLegendItem(),
+          _TodayLegendItem(label: l10n.calendarToday),
         ],
       );
+  }
 }
 
 class _LegendItem extends StatelessWidget {
@@ -592,11 +602,13 @@ class _LegendItem extends StatelessWidget {
 }
 
 class _TodayLegendItem extends StatelessWidget {
-  const _TodayLegendItem();
+  const _TodayLegendItem({required this.label});
+
+  final String label;
 
   @override
   Widget build(BuildContext context) => _LegendPill(
-        label: 'Hari ini',
+        label: label,
         visual: Container(
           width: 14,
           height: 14,
@@ -655,13 +667,15 @@ class _SelectedDateCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final locale = l10n.localeName.startsWith('id') ? 'id_ID' : 'en';
     final eventTypes = events.map((event) => event.type).toSet();
     final hasEstimate = eventTypes.any(
       (type) => type != _CalendarEventType.recorded,
     );
 
     return CycleCareCard(
-      semanticLabel: 'Detail ${DateOnly.display(selectedDay)}',
+      semanticLabel: 'Detail ${DateOnly.display(selectedDay, l10n.localeName)}',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -673,12 +687,12 @@ class _SelectedDateCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      DateFormat('d MMMM', 'id_ID').format(selectedDay),
+                      DateFormat('d MMMM', locale).format(selectedDay),
                       style: Theme.of(context).textTheme.titleLarge,
                     ),
                     const SizedBox(height: CycleCareSpacing.xxs),
                     Text(
-                      DateFormat('EEEE, yyyy', 'id_ID').format(selectedDay),
+                      DateFormat('EEEE, yyyy', locale).format(selectedDay),
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
                             color: context.cycleCareColors.textSecondary,
                           ),
@@ -687,14 +701,14 @@ class _SelectedDateCard extends StatelessWidget {
                 ),
               ),
               if (records.isNotEmpty)
-                const CycleCareStatusChip(
-                  label: 'Tercatat',
+                CycleCareStatusChip(
+                  label: l10n.historyRecordedChip,
                   icon: Icons.verified_outlined,
                   tone: CycleCareStatusTone.success,
                 )
               else if (hasEstimate)
-                const CycleCareStatusChip(
-                  label: 'Perkiraan',
+                CycleCareStatusChip(
+                  label: l10n.calendarPredictedPeriod,
                   icon: Icons.auto_awesome_outlined,
                   tone: CycleCareStatusTone.info,
                 ),
@@ -707,8 +721,8 @@ class _SelectedDateCard extends StatelessWidget {
             for (final record in records) ...[
               _DetailRow(
                 icon: Icons.water_drop_outlined,
-                title: 'Period tercatat',
-                message: _recordRange(record),
+                title: l10n.calendarRecordedDetailTitle,
+                message: _recordRange(context, record),
                 color: CycleCareColors.period,
               ),
               const SizedBox(height: CycleCareSpacing.sm),
@@ -718,7 +732,7 @@ class _SelectedDateCard extends StatelessWidget {
             )) ...[
               _DetailRow(
                 icon: event.type.icon,
-                title: event.type.detailTitle,
+                title: event.type.detailTitle(context),
                 message: event.description,
                 color: event.type.color,
               ),
@@ -730,11 +744,12 @@ class _SelectedDateCard extends StatelessWidget {
     );
   }
 
-  String _recordRange(PeriodRecord record) {
+  String _recordRange(BuildContext context, PeriodRecord record) {
+    final l10n = AppLocalizations.of(context);
     if (record.endDate == null) {
-      return 'Dimulai ${DateOnly.display(record.startDate)} dan masih berlangsung.';
+      return l10n.calendarStartOngoing(DateOnly.display(record.startDate, l10n.localeName));
     }
-    return '${DateOnly.display(record.startDate)} sampai ${DateOnly.display(record.endDate!)}.';
+    return l10n.calendarStartToEnd(DateOnly.display(record.startDate, l10n.localeName), DateOnly.display(record.endDate!, l10n.localeName));
   }
 }
 
@@ -744,7 +759,9 @@ class _SelectedDateEmpty extends StatelessWidget {
   final bool hasAnyRecords;
 
   @override
-  Widget build(BuildContext context) => Container(
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
         width: double.infinity,
         padding: const EdgeInsets.all(CycleCareSpacing.md),
         decoration: BoxDecoration(
@@ -763,13 +780,14 @@ class _SelectedDateEmpty extends StatelessWidget {
             Expanded(
               child: Text(
                 hasAnyRecords
-                    ? 'Tidak ada catatan atau perkiraan pada tanggal ini.'
-                    : 'Belum ada catatan period. Catat period pertamamu untuk mulai melihat pola siklus.',
+                    ? l10n.calendarEmptyNoRecord
+                    : l10n.calendarEmptyFirstPrompt,
               ),
             ),
           ],
         ),
       );
+  }
 }
 
 class _DetailRow extends StatelessWidget {
@@ -824,6 +842,7 @@ class _QuickOngoingCalendarToggle extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final ongoing = records.where((r) => r.endDate == null).firstOrNull;
     final busy = ref.watch(periodActionsProvider).isLoading;
     if (ongoing != null) {
@@ -837,7 +856,7 @@ class _QuickOngoingCalendarToggle extends ConsumerWidget {
                     await ref.read(periodActionsProvider.notifier).finish(ongoing.id, DateTime.now());
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Period diselesaikan hari ini.')),
+                        SnackBar(content: Text(l10n.snackbarPeriodFinishedToday)),
                       );
                     }
                   } catch (e) {
@@ -845,7 +864,7 @@ class _QuickOngoingCalendarToggle extends ConsumerWidget {
                   }
                 },
           icon: const Icon(Icons.stop_circle_outlined, size: 18),
-          label: const Text('Selesaikan period hari ini'),
+          label: Text(l10n.calendarFinishPeriodToday),
         ),
       );
     }
@@ -857,13 +876,13 @@ class _QuickOngoingCalendarToggle extends ConsumerWidget {
             : () async {
                 try {
                   await ref.read(periodActionsProvider.notifier).create(startDate: DateTime.now());
-                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Period dimulai hari ini.')));
+                  if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(l10n.snackbarPeriodStartedToday)));
                 } catch (e) {
                   if (context.mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
                 }
               },
         icon: const Icon(Icons.play_circle_outline_rounded, size: 18),
-        label: const Text('Mulai period hari ini'),
+        label: Text(l10n.calendarStartPeriodToday),
       ),
     );
   }
@@ -898,13 +917,14 @@ class _PredictionSafetyNote extends StatelessWidget {
   const _PredictionSafetyNote();
 
   @override
-  Widget build(BuildContext context) => Semantics(
-        label:
-            'Informasi perkiraan. Perkiraan dapat berubah seiring catatan baru. Estimasi masa subur bukan panduan kontrasepsi.',
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Semantics(
+        label: l10n.calendarSafetyNote,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: CycleCareSpacing.md),
           child: Text(
-            'Perkiraan dapat berubah seiring catatan baru. Estimasi masa subur bukan panduan kontrasepsi.',
+            l10n.calendarSafetyNote,
             textAlign: TextAlign.center,
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: context.cycleCareColors.textSecondary,
@@ -912,6 +932,7 @@ class _PredictionSafetyNote extends StatelessWidget {
           ),
         ),
       );
+  }
 }
 
 Map<DateTime, List<_CalendarEvent>> _buildEvents(
@@ -936,7 +957,7 @@ Map<DateTime, List<_CalendarEvent>> _buildEvents(
         date,
         const _CalendarEvent(
           type: _CalendarEventType.recorded,
-          description: 'Tanggal ini termasuk dalam period yang kamu catat.',
+          description: 'Recorded period',
         ),
       );
     }
@@ -951,7 +972,7 @@ Map<DateTime, List<_CalendarEvent>> _buildEvents(
         _CalendarEvent(
           type: _CalendarEventType.predicted,
           description:
-              'Tanggal ini termasuk rentang perkiraan period siklus ke-${projection.sequence}.',
+              'Predicted period cycle ${projection.sequence}.',
         ),
       );
     }
@@ -961,7 +982,7 @@ Map<DateTime, List<_CalendarEvent>> _buildEvents(
         _CalendarEvent(
           type: _CalendarEventType.ovulation,
           description:
-              'Perkiraan ovulasi siklus ke-${projection.sequence}. Tanggal ini dapat berubah.',
+              'Ovulation estimate cycle ${projection.sequence}.',
         ),
       );
     }
@@ -978,7 +999,7 @@ Map<DateTime, List<_CalendarEvent>> _buildEvents(
           _CalendarEvent(
             type: _CalendarEventType.fertile,
             description:
-                'Tanggal ini termasuk estimasi masa subur siklus ke-${projection.sequence}.',
+                'Fertile window cycle ${projection.sequence}.',
           ),
         );
       }
@@ -990,19 +1011,25 @@ Map<DateTime, List<_CalendarEvent>> _buildEvents(
 enum _CalendarEventType { recorded, predicted, fertile, ovulation }
 
 extension on _CalendarEventType {
-  String get semanticLabel => switch (this) {
-        _CalendarEventType.recorded => 'period tercatat',
-        _CalendarEventType.predicted => 'perkiraan period',
-        _CalendarEventType.fertile => 'perkiraan masa subur',
-        _CalendarEventType.ovulation => 'perkiraan ovulasi',
+  String detailTitle(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return switch (this) {
+        _CalendarEventType.recorded => l10n.calendarRecordedDetailTitle,
+        _CalendarEventType.predicted => l10n.calendarPredictedDetailTitle,
+        _CalendarEventType.fertile => l10n.calendarFertileDetailTitle,
+        _CalendarEventType.ovulation => l10n.calendarOvulationDetailTitle,
       };
+  }
 
-  String get detailTitle => switch (this) {
-        _CalendarEventType.recorded => 'Period tercatat',
-        _CalendarEventType.predicted => 'Perkiraan period',
-        _CalendarEventType.fertile => 'Masa subur (perkiraan)',
-        _CalendarEventType.ovulation => 'Ovulasi (perkiraan)',
+  String semanticLabel(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return switch (this) {
+        _CalendarEventType.recorded => l10n.calendarPeriodRecorded,
+        _CalendarEventType.predicted => l10n.calendarPredictedPeriod,
+        _CalendarEventType.fertile => l10n.calendarFertileWindow,
+        _CalendarEventType.ovulation => l10n.calendarOvulation,
       };
+  }
 
   IconData get icon => switch (this) {
         _CalendarEventType.recorded => Icons.water_drop_outlined,
@@ -1020,18 +1047,21 @@ extension on _CalendarEventType {
 }
 
 String _daySemanticLabel(
+  BuildContext context,
   DateTime day,
   List<_CalendarEvent> events, {
   required bool isToday,
   required bool isSelected,
 }) {
+  final l10n = AppLocalizations.of(context);
+  final locale = l10n.localeName.startsWith('id') ? 'id_ID' : 'en';
   final parts = <String>[
-    DateFormat('d MMMM', 'id_ID').format(day),
+    DateFormat('d MMMM', locale).format(day),
     ...events.map((event) => event.type).toSet().map(
-          (type) => type.semanticLabel,
+          (type) => type.semanticLabel(context),
         ),
-    if (isToday) 'hari ini',
-    if (isSelected) 'dipilih',
+    if (isToday) l10n.calendarToday,
+    if (isSelected) 'selected',
   ];
   return '${parts.join(', ')}.';
 }

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/design/cycle_care_design.dart';
 import '../../../app/providers.dart';
 import '../../../app/widgets.dart';
+import '../../../l10n/app_localizations.dart';
 import 'widgets/settings_sections.dart';
 
 class SettingsPage extends ConsumerWidget {
@@ -12,9 +13,10 @@ class SettingsPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context);
     final syncSnapshot = ref.watch(syncSnapshotProvider);
     return Scaffold(
-      appBar: const CycleCareAppBar(title: 'Pengaturan'),
+      appBar: CycleCareAppBar(title: l10n.settingsTitle),
       body: LayoutBuilder(
         builder: (context, constraints) {
           final isWide = constraints.maxWidth >= 900;

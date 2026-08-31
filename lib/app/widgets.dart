@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../l10n/app_localizations.dart';
 import 'design/cycle_care_design.dart';
 
 export 'widgets/cycle_care_background.dart';
@@ -59,10 +60,10 @@ class MedicalDisclaimer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final colors = context.cycleCareColors;
     return Semantics(
-      label:
-          'Informasi medis. Prediksi CycleCare adalah perkiraan berdasarkan riwayat yang dicatat dan bukan diagnosis medis.',
+      label: l10n.medicalDisclaimer,
       child: Container(
         padding: const EdgeInsets.all(CycleCareSpacing.md),
         decoration: BoxDecoration(
@@ -77,7 +78,7 @@ class MedicalDisclaimer extends StatelessWidget {
             const SizedBox(width: CycleCareSpacing.sm),
             Expanded(
               child: Text(
-                'Prediksi CycleCare adalah perkiraan berdasarkan riwayat yang dicatat, bukan diagnosis medis.',
+                l10n.medicalDisclaimer,
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             ),
