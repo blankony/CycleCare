@@ -127,7 +127,7 @@ String? resolveAppRedirect({
   return null;
 }
 
-class AppShell extends StatelessWidget {
+class AppShell extends StatefulWidget {
   const AppShell({required this.navigationShell, super.key});
 
   static const double largeScreenMinWidth = 900;
@@ -135,10 +135,81 @@ class AppShell extends StatelessWidget {
   final StatefulNavigationShell navigationShell;
 
   @override
+  State<AppShell> createState() => _AppShellState();
+}
+
+class _AppShellState extends State<AppShell> {
+  late final PageController _pageController;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController =
+        PageController(initialPage: widget.navigationShell.currentIndex);
+  }
+
+  @override
+  void didUpdateWidget(covariant AppShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.navigationShell.currentIndex !=
+        oldWidget.navigationShell.currentIndex) {
+      final target = widget.navigationShell.currentIndex;
+      if (_pageController.hasClients) {
+        final current = _pageController.page?.round();
+        if (current != target) {
+          _pageController.animateToPage(
+            target,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+          );
+        }
+      } else {
+        _pageController.jumpToPage(target);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _onDestinationSelected(int index) {
+    if (index == widget.navigationShell.currentIndex) {
+      widget.navigationShell.goBranch(index, initialLocation: true);
+      return;
+    }
+    _pageController.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 300),
+      curve: Curves.easeInOut,
+    );
+  }
+
+  void _onPageChanged(int index) {
+    if (index != widget.navigationShell.currentIndex) {
+      widget.navigationShell.goBranch(index);
+    }
+  }
+
+  Widget _buildPageView() => PageView(
+        controller: _pageController,
+        physics: const BouncingScrollPhysics(),
+        onPageChanged: _onPageChanged,
+        children: const [
+          _KeepAlivePage(child: DashboardPage()),
+          _KeepAlivePage(child: CalendarPage()),
+          _KeepAlivePage(child: HistoryPage()),
+          _KeepAlivePage(child: SettingsPage()),
+        ],
+      );
+
+  @override
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
           final colors = context.cycleCareColors;
-          if (constraints.maxWidth > largeScreenMinWidth) {
+          if (constraints.maxWidth > AppShell.largeScreenMinWidth) {
             return Scaffold(
               backgroundColor: Colors.transparent,
               body: CycleCareBackground(
@@ -154,8 +225,9 @@ class AppShell extends StatelessWidget {
                             border: Border.all(color: colors.divider),
                           ),
                           child: NavigationRail(
-                            selectedIndex: navigationShell.currentIndex,
-                            onDestinationSelected: navigationShell.goBranch,
+                            selectedIndex:
+                                widget.navigationShell.currentIndex,
+                            onDestinationSelected: _onDestinationSelected,
                             groupAlignment: -0.65,
                             minWidth: 96,
                             labelType: NavigationRailLabelType.all,
@@ -186,7 +258,7 @@ class AppShell extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: CycleCareSpacing.xs),
-                      Expanded(child: navigationShell),
+                      Expanded(child: _buildPageView()),
                     ],
                   ),
                 ),
@@ -196,7 +268,7 @@ class AppShell extends StatelessWidget {
 
           return Scaffold(
             backgroundColor: colors.background,
-            body: navigationShell,
+            body: _buildPageView(),
             bottomNavigationBar: SafeArea(
               top: false,
               minimum: const EdgeInsets.fromLTRB(
@@ -214,8 +286,8 @@ class AppShell extends StatelessWidget {
                 child: ClipRRect(
                   borderRadius: CycleCareRadius.cardBorder,
                   child: NavigationBar(
-                    selectedIndex: navigationShell.currentIndex,
-                    onDestinationSelected: navigationShell.goBranch,
+                    selectedIndex: widget.navigationShell.currentIndex,
+                    onDestinationSelected: _onDestinationSelected,
                     destinations: _barDestinations,
                   ),
                 ),
@@ -265,4 +337,25 @@ class AppShell extends StatelessWidget {
       label: Text('Pengaturan'),
     ),
   ];
+}
+
+class _KeepAlivePage extends StatefulWidget {
+  const _KeepAlivePage({required this.child});
+
+  final Widget child;
+
+  @override
+  State<_KeepAlivePage> createState() => _KeepAlivePageState();
+}
+
+class _KeepAlivePageState extends State<_KeepAlivePage>
+    with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
+  @override
+  Widget build(BuildContext context) {
+    super.build(context);
+    return widget.child;
+  }
 }
