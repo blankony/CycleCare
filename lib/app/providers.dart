@@ -30,6 +30,7 @@ import '../domain/services/future_cycle_projection_service.dart';
 import '../domain/services/local_notification_service.dart';
 import '../domain/services/notification_service.dart';
 import '../domain/services/period_recalculation_service.dart';
+import '../domain/services/reminder_schedule_service.dart';
 import '../domain/services/prediction_service.dart';
 import '../domain/services/security_service.dart';
 import '../domain/services/sync_controller.dart';
@@ -46,6 +47,9 @@ final supabaseClientProvider = Provider<SupabaseClient>((ref) {
 
 final notificationServiceProvider =
     Provider<NotificationService>((ref) => LocalNotificationService());
+
+final reminderScheduleServiceProvider = Provider<ReminderScheduleService>(
+    (ref) => ReminderScheduleService(ref));
 final securityServiceProvider =
     Provider<SecurityService>((ref) => BiometricSecurityService());
 final syncServiceProvider = Provider<SyncService>((ref) => SyncService(

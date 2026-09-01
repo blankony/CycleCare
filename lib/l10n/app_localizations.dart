@@ -818,29 +818,77 @@ abstract class AppLocalizations {
   /// **'Reminders'**
   String get settingsReminders;
 
-  /// No description provided for @settingsReminderPeriod.
+  /// No description provided for @settingsReminderTime.
   ///
   /// In en, this message translates to:
-  /// **'Period reminder'**
-  String get settingsReminderPeriod;
+  /// **'Notification time'**
+  String get settingsReminderTime;
+
+  /// No description provided for @settingsReminderTimeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminders are delivered at this time'**
+  String get settingsReminderTimeSubtitle;
+
+  /// No description provided for @settingsPillReminderTime.
+  ///
+  /// In en, this message translates to:
+  /// **'Pill reminder time'**
+  String get settingsPillReminderTime;
 
   /// No description provided for @settingsDailyCheckin.
   ///
   /// In en, this message translates to:
-  /// **'Daily 6 AM check-in'**
+  /// **'Daily mood check-in'**
   String get settingsDailyCheckin;
 
   /// No description provided for @settingsDailyCheckinSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Gentle morning reminder while your period is ongoing'**
+  /// **'Gentle reminder while your period is ongoing'**
   String get settingsDailyCheckinSubtitle;
 
   /// No description provided for @settingsDailyCheckinOngoingOnly.
   ///
   /// In en, this message translates to:
-  /// **'You will receive this at 6 AM only while a period is ongoing.'**
+  /// **'Delivered only while a period is ongoing.'**
   String get settingsDailyCheckinOngoingOnly;
+
+  /// No description provided for @settingsPeriodHeadsUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Period heads-up (2 days before)'**
+  String get settingsPeriodHeadsUp;
+
+  /// No description provided for @settingsPeriodHeadsUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder 2 days before the predicted start date'**
+  String get settingsPeriodHeadsUpSubtitle;
+
+  /// No description provided for @settingsOvulationReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Ovulation day reminder'**
+  String get settingsOvulationReminder;
+
+  /// No description provided for @settingsOvulationReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reminder on the predicted ovulation day'**
+  String get settingsOvulationReminderSubtitle;
+
+  /// No description provided for @settingsPillReminder.
+  ///
+  /// In en, this message translates to:
+  /// **'Pill / supplement reminder'**
+  String get settingsPillReminder;
+
+  /// No description provided for @settingsPillReminderSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily reminder at your chosen time'**
+  String get settingsPillReminderSubtitle;
 
   /// No description provided for @settingsNotificationPermissionDenied.
   ///

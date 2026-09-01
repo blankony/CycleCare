@@ -14,7 +14,12 @@ class LocalNotificationService implements NotificationService {
   static const _predictionChannelName = 'CycleCare Reminders';
   static const _dailyChannelId = 'period_daily_mood';
   static const _dailyChannelName = 'Daily Period Check-in';
+  static const _pillChannelId = 'cyclecare_pill';
+  static const _pillChannelName = 'Pill Reminder';
   static const _dailyCheckinId = 2001;
+  static const _headsUpId = 2002;
+  static const _ovulationId = 2003;
+  static const _pillId = 2004;
 
   @override
   Future<void> initialize() async {
@@ -30,8 +35,15 @@ class LocalNotificationService implements NotificationService {
       const AndroidNotificationChannel(
         _dailyChannelId,
         _dailyChannelName,
-        description:
-            'Daily 6 AM check-in while your period is ongoing.',
+        description: 'Daily 6 AM check-in while your period is ongoing.',
+        importance: Importance.high,
+      ),
+    );
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _pillChannelId,
+        _pillChannelName,
+        description: 'Daily pill / supplement reminder.',
         importance: Importance.high,
       ),
     );
@@ -85,11 +97,13 @@ class LocalNotificationService implements NotificationService {
   }
 
   @override
-  Future<void> scheduleDailyPeriodCheckin({required String localeCode}) async {
+  Future<void> scheduleDailyPeriodCheckin(
+      {required String localeCode,
+      required int hour,
+      required int minute}) async {
     await _plugin.cancel(_dailyCheckinId);
     final now = tz.TZDateTime.now(tz.local);
-    var scheduled = tz.TZDateTime(
-        tz.local, now.year, now.month, now.day, 6, 0);
+    var scheduled = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
     if (scheduled.isBefore(now)) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
@@ -121,7 +135,117 @@ class LocalNotificationService implements NotificationService {
   Future<void> cancelDailyPeriodCheckin() => _plugin.cancel(_dailyCheckinId);
 
   @override
+  Future<void> schedulePeriodHeadsUp({
+    required DateTime predictedStart,
+    required int hour,
+    required int minute,
+    required String localeCode,
+  }) async {
+    await _plugin.cancel(_headsUpId);
+    final target = predictedStart.subtract(const Duration(days: 2));
+    final when = _atCustomTime(target, hour, minute);
+    final isId = localeCode == 'id';
+    await _plugin.zonedSchedule(
+      _headsUpId,
+      isId ? 'Heads-up: Period akan datang \u{1F338}' : 'Heads-up: Your period is coming \u{1F338}',
+      isId
+          ? 'Period diperkirakan 2 hari lagi. Siapkan yang kamu butuhkan.'
+          : 'Your period is expected in 2 days. Get anything you need ready.',
+      when,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _predictionChannelId,
+          _predictionChannelName,
+          importance: Importance.defaultImportance,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  @override
+  Future<void> cancelPeriodHeadsUp() => _plugin.cancel(_headsUpId);
+
+  @override
+  Future<void> scheduleOvulationReminder({
+    required DateTime ovulationDate,
+    required int hour,
+    required int minute,
+    required String localeCode,
+  }) async {
+    await _plugin.cancel(_ovulationId);
+    final when = _atCustomTime(ovulationDate, hour, minute);
+    final isId = localeCode == 'id';
+    await _plugin.zonedSchedule(
+      _ovulationId,
+      isId ? 'Hari ovulasi \u{1F95A}' : 'Ovulation day \u{1F95A}',
+      isId
+          ? 'Hari ini diperkirakan hari ovulasi. Estimasi ini bukan panduan kontrasepsi.'
+          : 'Today is your estimated ovulation day. This is not contraception guidance.',
+      when,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _predictionChannelId,
+          _predictionChannelName,
+          importance: Importance.defaultImportance,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+    );
+  }
+
+  @override
+  Future<void> cancelOvulationReminder() => _plugin.cancel(_ovulationId);
+
+  @override
+  Future<void> schedulePillReminder({
+    required int hour,
+    required int minute,
+    required String localeCode,
+  }) async {
+    await _plugin.cancel(_pillId);
+    final now = tz.TZDateTime.now(tz.local);
+    var when = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
+    if (when.isBefore(now)) when = when.add(const Duration(days: 1));
+    final isId = localeCode == 'id';
+    await _plugin.zonedSchedule(
+      _pillId,
+      isId ? 'Pengingat pil / suplemen \u{1F48A}' : 'Pill / supplement reminder \u{1F48A}',
+      isId
+          ? 'Waktunya minum pil atau suplemen harianmu.'
+          : 'Time to take your daily pill or supplement.',
+      when,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _pillChannelId,
+          _pillChannelName,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  @override
+  Future<void> cancelPillReminder() => _plugin.cancel(_pillId);
+
+  @override
   Future<void> cancelAll() => _plugin.cancelAll();
+
+  tz.TZDateTime _atCustomTime(DateTime date, int hour, int minute) {
+    return tz.TZDateTime(tz.local, date.year, date.month, date.day, hour, minute);
+  }
 
   Future<void> _schedule(
       int id, tz.TZDateTime date, String title, String body) async {

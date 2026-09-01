@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 
 import '../../../../app/locale_provider.dart';
 import '../../../../app/providers.dart';
+import '../../../../app/reminder_settings_provider.dart';
 import '../../../../app/widgets/cycle_care_settings_group.dart';
 import '../../../../core/date/date_only.dart';
 import '../../../../domain/entities/sync_state.dart';
@@ -74,88 +75,216 @@ class ReminderSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
-    final settings =
-        ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
-    final reminderEnabled = settings['reminder_enabled'] == 'true';
-    final dailyCheckinEnabled =
-        settings['daily_checkin_enabled'] != 'false';
+    final s = ref.watch(reminderSettingsProvider);
     final hasOngoingPeriod =
         (ref.watch(activePeriodsProvider).valueOrNull ?? const [])
             .any((r) => r.endDate == null);
+    final timeLabel = MaterialLocalizations.of(context)
+        .formatTimeOfDay(s.reminderTime, alwaysUse24HourFormat: false);
+    final pillTimeLabel = MaterialLocalizations.of(context)
+        .formatTimeOfDay(s.pillReminderTime, alwaysUse24HourFormat: false);
     return CycleCareSectionGroup(
       title: l10n.settingsReminders,
       children: [
         CycleCareSettingsTile(
-          icon: Icons.notifications_active_outlined,
-          title: l10n.settingsReminderPeriod,
-          trailing: Switch.adaptive(
-            key: const ValueKey('settings.reminder.switch'),
-            value: reminderEnabled,
-            onChanged: (value) async {
-              await ref.read(notificationServiceProvider).requestPermission();
-              await ref
-                  .read(settingsRepositoryProvider)
-                  .set('reminder_enabled', value ? 'true' : 'false');
-              ref.invalidate(settingsProvider);
-            },
-          ),
+          icon: Icons.schedule_outlined,
+          title: l10n.settingsReminderTime,
+          subtitle: '${l10n.settingsReminderTimeSubtitle} \u00b7 $timeLabel',
+          trailing: const Icon(Icons.chevron_right, size: 20),
+          onTap: () => _pickReminderTime(context, ref),
         ),
         CycleCareSettingsTile(
           icon: Icons.wb_sunny_outlined,
           title: l10n.settingsDailyCheckin,
-          subtitle: l10n.settingsDailyCheckinSubtitle,
+          subtitle: s.dailyCheckinEnabled && !hasOngoingPeriod
+              ? '${l10n.settingsDailyCheckinSubtitle} \u00b7 ${l10n.settingsDailyCheckinOngoingOnly}'
+              : l10n.settingsDailyCheckinSubtitle,
           trailing: Switch.adaptive(
             key: const ValueKey('settings.daily_checkin.switch'),
-            value: dailyCheckinEnabled,
+            value: s.dailyCheckinEnabled,
             onChanged: (value) => _toggleDailyCheckin(context, ref, value),
           ),
         ),
-        if (dailyCheckinEnabled && !hasOngoingPeriod)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              l10n.settingsDailyCheckinOngoingOnly,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context)
-                        .colorScheme
-                        .onSurfaceVariant,
-                  ),
-            ),
+        CycleCareSettingsTile(
+          icon: Icons.event_outlined,
+          title: l10n.settingsPeriodHeadsUp,
+          subtitle: l10n.settingsPeriodHeadsUpSubtitle,
+          trailing: Switch.adaptive(
+            key: const ValueKey('settings.heads_up.switch'),
+            value: s.headsUpEnabled,
+            onChanged: (value) => _toggleHeadsUp(context, ref, value),
+          ),
+        ),
+        CycleCareSettingsTile(
+          icon: Icons.favorite_border,
+          title: l10n.settingsOvulationReminder,
+          subtitle: l10n.settingsOvulationReminderSubtitle,
+          trailing: Switch.adaptive(
+            key: const ValueKey('settings.ovulation_reminder.switch'),
+            value: s.ovulationReminderEnabled,
+            onChanged: (value) => _toggleOvulation(context, ref, value),
+          ),
+        ),
+        CycleCareSettingsTile(
+          icon: Icons.medication_outlined,
+          title: l10n.settingsPillReminder,
+          subtitle: s.pillReminderEnabled
+              ? '${l10n.settingsPillReminderSubtitle} \u00b7 $pillTimeLabel'
+              : l10n.settingsPillReminderSubtitle,
+          trailing: Switch.adaptive(
+            key: const ValueKey('settings.pill.switch'),
+            value: s.pillReminderEnabled,
+            onChanged: (value) => _togglePill(context, ref, value),
+          ),
+        ),
+        if (s.pillReminderEnabled)
+          CycleCareSettingsTile(
+            icon: Icons.access_time,
+            title: l10n.settingsPillReminderTime,
+            subtitle: pillTimeLabel,
+            trailing: const Icon(Icons.chevron_right, size: 20),
+            onTap: () => _pickPillTime(context, ref),
           ),
       ],
     );
   }
 
-  Future<void> _toggleDailyCheckin(
-      BuildContext context, WidgetRef ref, bool value) async {
+  Future<void> _pickReminderTime(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(reminderSettingsProvider).reminderTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current,
+      helpText: AppLocalizations.of(context).settingsReminderTime,
+    );
+    if (picked == null || picked == current) return;
+    final repo = ref.read(reminderSettingsProvider.notifier);
+    await repo.setReminderTime(picked);
+    if (!context.mounted) return;
+    await _rescheduleAll(ref);
+  }
+
+  Future<void> _pickPillTime(BuildContext context, WidgetRef ref) async {
+    final current = ref.read(reminderSettingsProvider).pillReminderTime;
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: current,
+      helpText: AppLocalizations.of(context).settingsPillReminderTime,
+    );
+    if (picked == null || picked == current) return;
+    await ref.read(reminderSettingsProvider.notifier).setPillReminderTime(picked);
+    if (!context.mounted) return;
+    await _reschedulePillOnly(ref);
+  }
+
+  Future<void> _ensurePermission(BuildContext context, WidgetRef ref) async {
     final service = ref.read(notificationServiceProvider);
-    if (value) {
-      final granted = await service.requestPermission();
-      if (!granted) {
-        final hasPermission = await service.hasRequestPermission();
-        if (!hasPermission && context.mounted) {
-          final l10n = AppLocalizations.of(context);
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.settingsNotificationPermissionDenied)),
-          );
-        }
+    final granted = await service.requestPermission();
+    if (!granted) {
+      final hasPermission = await service.hasRequestPermission();
+      if (!hasPermission && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+              content:
+                  Text(AppLocalizations.of(context).settingsNotificationPermissionDenied)),
+        );
       }
     }
-    await ref
-        .read(settingsRepositoryProvider)
-        .set('daily_checkin_enabled', value ? 'true' : 'false');
-    ref.invalidate(settingsProvider);
+  }
+
+  Future<void> _toggleDailyCheckin(
+      BuildContext context, WidgetRef ref, bool value) async {
+    if (value) await _ensurePermission(context, ref);
+    await ref.read(reminderSettingsProvider.notifier).setDailyCheckinEnabled(value);
     try {
+      final service = ref.read(notificationServiceProvider);
       if (value) {
         final hasActive = (await ref.read(activePeriodsProvider.future))
             .any((r) => r.endDate == null);
         if (hasActive) {
+          final s = ref.read(reminderSettingsProvider);
           final localeCode = ref.read(appLocaleCodeProvider);
-          await service.scheduleDailyPeriodCheckin(localeCode: localeCode);
+          await service.scheduleDailyPeriodCheckin(
+            localeCode: localeCode,
+            hour: s.reminderTime.hour,
+            minute: s.reminderTime.minute,
+          );
         }
       } else {
-        await service.cancelDailyPeriodCheckin();
+        await ref.read(notificationServiceProvider).cancelDailyPeriodCheckin();
       }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleHeadsUp(
+      BuildContext context, WidgetRef ref, bool value) async {
+    if (value) await _ensurePermission(context, ref);
+    await ref.read(reminderSettingsProvider.notifier).setHeadsUpEnabled(value);
+    try {
+      final service = ref.read(notificationServiceProvider);
+      if (!value) {
+        await service.cancelPeriodHeadsUp();
+      } else {
+        final prediction = await ref.read(predictionProvider.future);
+        if (prediction?.predictedStart != null) {
+          final s = ref.read(reminderSettingsProvider);
+          final localeCode = ref.read(appLocaleCodeProvider);
+          await service.schedulePeriodHeadsUp(
+            predictedStart: prediction!.predictedStart!,
+            hour: s.reminderTime.hour,
+            minute: s.reminderTime.minute,
+            localeCode: localeCode,
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleOvulation(
+      BuildContext context, WidgetRef ref, bool value) async {
+    if (value) await _ensurePermission(context, ref);
+    await ref.read(reminderSettingsProvider.notifier).setOvulationReminderEnabled(value);
+    try {
+      final service = ref.read(notificationServiceProvider);
+      if (!value) {
+        await service.cancelOvulationReminder();
+      } else {
+        final fertility = ref.read(fertilityEstimateProvider);
+        if (fertility != null) {
+          final s = ref.read(reminderSettingsProvider);
+          final localeCode = ref.read(appLocaleCodeProvider);
+          await service.scheduleOvulationReminder(
+            ovulationDate: fertility.ovulationCenter,
+            hour: s.reminderTime.hour,
+            minute: s.reminderTime.minute,
+            localeCode: localeCode,
+          );
+        }
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _togglePill(
+      BuildContext context, WidgetRef ref, bool value) async {
+    if (value) await _ensurePermission(context, ref);
+    await ref.read(reminderSettingsProvider.notifier).setPillReminderEnabled(value);
+    if (!value) {
+      try {
+        await ref.read(notificationServiceProvider).cancelPillReminder();
+      } catch (_) {}
+    } else {
+      await _reschedulePillOnly(ref);
+    }
+  }
+
+  Future<void> _rescheduleAll(WidgetRef ref) async {
+    try {
+      await ref.read(reminderScheduleServiceProvider).rescheduleAll();
+    } catch (_) {}
+  }
+
+  Future<void> _reschedulePillOnly(WidgetRef ref) async {
+    try {
+      await ref.read(reminderScheduleServiceProvider).reschedulePill();
     } catch (_) {}
   }
 }

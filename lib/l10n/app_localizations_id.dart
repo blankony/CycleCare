@@ -411,18 +411,46 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsReminders => 'Pengingat';
 
   @override
-  String get settingsReminderPeriod => 'Pengingat period';
+  String get settingsReminderTime => 'Waktu notifikasi';
 
   @override
-  String get settingsDailyCheckin => 'Check-in harian jam 6 pagi';
+  String get settingsReminderTimeSubtitle =>
+      'Pengingat harian dikirim pada jam ini';
+
+  @override
+  String get settingsPillReminderTime => 'Waktu pengingat pil';
+
+  @override
+  String get settingsDailyCheckin => 'Check-in mood harian';
 
   @override
   String get settingsDailyCheckinSubtitle =>
-      'Pengingat lembut setiap pagi selama period berlangsung';
+      'Pengingat lembut selama period masih berlangsung';
 
   @override
   String get settingsDailyCheckinOngoingOnly =>
-      'Kamu akan menerima ini jam 6 pagi hanya selama period masih berlangsung.';
+      'Hanya dikirim selama period masih berlangsung.';
+
+  @override
+  String get settingsPeriodHeadsUp => 'Pengingat period (2 hari sebelumnya)';
+
+  @override
+  String get settingsPeriodHeadsUpSubtitle =>
+      'Pengingat 2 hari sebelum tanggal prediksi';
+
+  @override
+  String get settingsOvulationReminder => 'Pengingat hari ovulasi';
+
+  @override
+  String get settingsOvulationReminderSubtitle =>
+      'Pengingat pada hari prediksi ovulasi';
+
+  @override
+  String get settingsPillReminder => 'Pengingat pil / suplemen';
+
+  @override
+  String get settingsPillReminderSubtitle =>
+      'Pengingat harian pada jam pilihanmu';
 
   @override
   String get settingsNotificationPermissionDenied =>

@@ -408,18 +408,46 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsReminders => 'Reminders';
 
   @override
-  String get settingsReminderPeriod => 'Period reminder';
+  String get settingsReminderTime => 'Notification time';
 
   @override
-  String get settingsDailyCheckin => 'Daily 6 AM check-in';
+  String get settingsReminderTimeSubtitle =>
+      'Daily reminders are delivered at this time';
+
+  @override
+  String get settingsPillReminderTime => 'Pill reminder time';
+
+  @override
+  String get settingsDailyCheckin => 'Daily mood check-in';
 
   @override
   String get settingsDailyCheckinSubtitle =>
-      'Gentle morning reminder while your period is ongoing';
+      'Gentle reminder while your period is ongoing';
 
   @override
   String get settingsDailyCheckinOngoingOnly =>
-      'You will receive this at 6 AM only while a period is ongoing.';
+      'Delivered only while a period is ongoing.';
+
+  @override
+  String get settingsPeriodHeadsUp => 'Period heads-up (2 days before)';
+
+  @override
+  String get settingsPeriodHeadsUpSubtitle =>
+      'Reminder 2 days before the predicted start date';
+
+  @override
+  String get settingsOvulationReminder => 'Ovulation day reminder';
+
+  @override
+  String get settingsOvulationReminderSubtitle =>
+      'Reminder on the predicted ovulation day';
+
+  @override
+  String get settingsPillReminder => 'Pill / supplement reminder';
+
+  @override
+  String get settingsPillReminderSubtitle =>
+      'Daily reminder at your chosen time';
 
   @override
   String get settingsNotificationPermissionDenied =>
