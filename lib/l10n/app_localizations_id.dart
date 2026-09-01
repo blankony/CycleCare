@@ -414,6 +414,21 @@ class AppLocalizationsId extends AppLocalizations {
   String get settingsReminderPeriod => 'Pengingat period';
 
   @override
+  String get settingsDailyCheckin => 'Check-in harian jam 6 pagi';
+
+  @override
+  String get settingsDailyCheckinSubtitle =>
+      'Pengingat lembut setiap pagi selama period berlangsung';
+
+  @override
+  String get settingsDailyCheckinOngoingOnly =>
+      'Kamu akan menerima ini jam 6 pagi hanya selama period masih berlangsung.';
+
+  @override
+  String get settingsNotificationPermissionDenied =>
+      'Izin notifikasi ditolak. Aktifkan notifikasi di pengaturan sistem untuk menerima pengingat.';
+
+  @override
   String get settingsSecurity => 'Keamanan';
 
   @override

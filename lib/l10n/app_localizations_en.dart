@@ -411,6 +411,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get settingsReminderPeriod => 'Period reminder';
 
   @override
+  String get settingsDailyCheckin => 'Daily 6 AM check-in';
+
+  @override
+  String get settingsDailyCheckinSubtitle =>
+      'Gentle morning reminder while your period is ongoing';
+
+  @override
+  String get settingsDailyCheckinOngoingOnly =>
+      'You will receive this at 6 AM only while a period is ongoing.';
+
+  @override
+  String get settingsNotificationPermissionDenied =>
+      'Notification permission denied. Enable notifications in system settings to receive reminders.';
+
+  @override
   String get settingsSecurity => 'Security';
 
   @override

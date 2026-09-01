@@ -23,6 +23,19 @@ class LocaleController {
     final normalized = code == 'id' ? 'id' : 'en';
     await ref.read(settingsRepositoryProvider).set('app_locale', normalized);
     ref.invalidate(settingsProvider);
+    try {
+      final service = ref.read(notificationServiceProvider);
+      final db = ref.read(databaseProvider);
+      final rows = await db.select(db.appSettings).get();
+      final enabled =
+          rows.where((r) => r.key == 'daily_checkin_enabled').firstOrNull?.value !=
+              'false';
+      if (!enabled) return;
+      final periodRepo = ref.read(periodRepositoryProvider);
+      final active = await periodRepo.getActiveUnfinishedPeriod();
+      if (active == null) return;
+      await service.scheduleDailyPeriodCheckin(localeCode: normalized);
+    } catch (_) {}
   }
 }
 

@@ -1,6 +1,7 @@
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 
+import 'daily_period_checkin_messages.dart';
 import 'notification_service.dart';
 
 class LocalNotificationService implements NotificationService {
@@ -9,12 +10,29 @@ class LocalNotificationService implements NotificationService {
 
   final FlutterLocalNotificationsPlugin _plugin;
 
+  static const _predictionChannelId = 'cyclecare_reminders';
+  static const _predictionChannelName = 'CycleCare Reminders';
+  static const _dailyChannelId = 'period_daily_mood';
+  static const _dailyChannelName = 'Daily Period Check-in';
+  static const _dailyCheckinId = 2001;
+
   @override
   Future<void> initialize() async {
     await _plugin.initialize(
       const InitializationSettings(
         android: AndroidInitializationSettings('@mipmap/ic_launcher'),
         iOS: DarwinInitializationSettings(),
+      ),
+    );
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    await android?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        _dailyChannelId,
+        _dailyChannelName,
+        description:
+            'Daily 6 AM check-in while your period is ongoing.',
+        importance: Importance.high,
       ),
     );
   }
@@ -29,6 +47,19 @@ class LocalNotificationService implements NotificationService {
     final iosResult =
         await ios?.requestPermissions(alert: true, badge: true, sound: true);
     return androidResult ?? iosResult ?? false;
+  }
+
+  @override
+  Future<bool> hasRequestPermission() async {
+    final android = _plugin.resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>();
+    final ios = _plugin.resolvePlatformSpecificImplementation<
+        IOSFlutterLocalNotificationsPlugin>();
+    final androidGranted = await android?.areNotificationsEnabled();
+    if (androidGranted != null) return androidGranted;
+    final iosSettings = await ios?.checkPermissions();
+    if (iosSettings != null) return iosSettings.isEnabled;
+    return false;
   }
 
   @override
@@ -54,6 +85,42 @@ class LocalNotificationService implements NotificationService {
   }
 
   @override
+  Future<void> scheduleDailyPeriodCheckin({required String localeCode}) async {
+    await _plugin.cancel(_dailyCheckinId);
+    final now = tz.TZDateTime.now(tz.local);
+    var scheduled = tz.TZDateTime(
+        tz.local, now.year, now.month, now.day, 6, 0);
+    if (scheduled.isBefore(now)) {
+      scheduled = scheduled.add(const Duration(days: 1));
+    }
+    final dayOfYear = _dayOfYear(scheduled);
+    final title = DailyPeriodCheckinMessages.title(localeCode);
+    final body = DailyPeriodCheckinMessages.body(localeCode, dayOfYear);
+    await _plugin.zonedSchedule(
+      _dailyCheckinId,
+      title,
+      body,
+      scheduled,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          _dailyChannelId,
+          _dailyChannelName,
+          importance: Importance.high,
+          priority: Priority.high,
+        ),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation:
+          UILocalNotificationDateInterpretation.absoluteTime,
+      matchDateTimeComponents: DateTimeComponents.time,
+    );
+  }
+
+  @override
+  Future<void> cancelDailyPeriodCheckin() => _plugin.cancel(_dailyCheckinId);
+
+  @override
   Future<void> cancelAll() => _plugin.cancelAll();
 
   Future<void> _schedule(
@@ -66,7 +133,7 @@ class LocalNotificationService implements NotificationService {
       date,
       const NotificationDetails(
         android: AndroidNotificationDetails(
-            'cyclecare_reminders', 'Pengingat CycleCare',
+            _predictionChannelId, _predictionChannelName,
             importance: Importance.defaultImportance),
         iOS: DarwinNotificationDetails(),
       ),
@@ -74,5 +141,10 @@ class LocalNotificationService implements NotificationService {
       uiLocalNotificationDateInterpretation:
           UILocalNotificationDateInterpretation.absoluteTime,
     );
+  }
+
+  int _dayOfYear(DateTime date) {
+    final start = DateTime(date.year, 1, 1);
+    return date.difference(start).inDays;
   }
 }

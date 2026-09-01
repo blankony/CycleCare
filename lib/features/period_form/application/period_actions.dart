@@ -27,6 +27,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.createPeriod(startDate: startDate, notes: notes);
       await _recalculateAndNotify(reminderStartDate: startDate);
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -46,6 +47,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.updatePeriodEnd(id: id, endDate: endDate);
       await _recalculateAndNotify();
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -56,6 +58,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.updatePeriod(record: record);
       await _recalculateAndNotify();
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -127,6 +130,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
       await _recalculateAndNotify(
         reminderStartDate: record == null && endDate == null ? startDate : null,
       );
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -137,6 +141,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.softDeletePeriod(id);
       await _recalculateAndNotify();
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -147,6 +152,7 @@ class PeriodActionsController extends AsyncNotifier<void> {
     state = await AsyncValue.guard(() async {
       await repository.restorePeriod(id);
       await _recalculateAndNotify();
+      await _syncDailyCheckin();
       _invalidateData();
       await _syncBestEffort();
     });
@@ -208,6 +214,59 @@ class PeriodActionsController extends AsyncNotifier<void> {
       try {
         await notifications.scheduleEndReminder(startDate: reminderStartDate);
       } catch (_) {}
+    }
+  }
+
+  Future<void> _syncDailyCheckin() async {
+    final enabled = await _isDailyCheckinEnabled();
+    if (!enabled) {
+      try {
+        await notifications.cancelDailyPeriodCheckin();
+      } catch (_) {}
+      return;
+    }
+    final hasActive = await _hasOngoingPeriod();
+    try {
+      if (hasActive) {
+        final locale = await _readLocaleCode();
+        await notifications.scheduleDailyPeriodCheckin(localeCode: locale);
+      } else {
+        await notifications.cancelDailyPeriodCheckin();
+      }
+    } catch (_) {}
+  }
+
+  Future<bool> _isDailyCheckinEnabled() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final rows = await db
+          .select(db.appSettings)
+          .get();
+      final entry = rows.where((r) => r.key == 'daily_checkin_enabled').firstOrNull;
+      if (entry == null) return true;
+      return entry.value == 'true';
+    } catch (_) {
+      return true;
+    }
+  }
+
+  Future<String> _readLocaleCode() async {
+    try {
+      final db = ref.read(databaseProvider);
+      final rows = await db.select(db.appSettings).get();
+      final entry = rows.where((r) => r.key == 'app_locale').firstOrNull;
+      return entry?.value == 'id' ? 'id' : 'en';
+    } catch (_) {
+      return 'en';
+    }
+  }
+
+  Future<bool> _hasOngoingPeriod() async {
+    try {
+      final active = await repository.getActiveUnfinishedPeriod();
+      return active != null;
+    } catch (_) {
+      return false;
     }
   }
 

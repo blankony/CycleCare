@@ -824,6 +824,30 @@ abstract class AppLocalizations {
   /// **'Period reminder'**
   String get settingsReminderPeriod;
 
+  /// No description provided for @settingsDailyCheckin.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily 6 AM check-in'**
+  String get settingsDailyCheckin;
+
+  /// No description provided for @settingsDailyCheckinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Gentle morning reminder while your period is ongoing'**
+  String get settingsDailyCheckinSubtitle;
+
+  /// No description provided for @settingsDailyCheckinOngoingOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'You will receive this at 6 AM only while a period is ongoing.'**
+  String get settingsDailyCheckinOngoingOnly;
+
+  /// No description provided for @settingsNotificationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification permission denied. Enable notifications in system settings to receive reminders.'**
+  String get settingsNotificationPermissionDenied;
+
   /// No description provided for @settingsSecurity.
   ///
   /// In en, this message translates to:

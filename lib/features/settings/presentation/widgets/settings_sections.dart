@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
+import '../../../../app/locale_provider.dart';
 import '../../../../app/providers.dart';
 import '../../../../app/widgets/cycle_care_settings_group.dart';
 import '../../../../core/date/date_only.dart';
@@ -76,6 +77,11 @@ class ReminderSection extends ConsumerWidget {
     final settings =
         ref.watch(settingsProvider).valueOrNull ?? const <String, String?>{};
     final reminderEnabled = settings['reminder_enabled'] == 'true';
+    final dailyCheckinEnabled =
+        settings['daily_checkin_enabled'] != 'false';
+    final hasOngoingPeriod =
+        (ref.watch(activePeriodsProvider).valueOrNull ?? const [])
+            .any((r) => r.endDate == null);
     return CycleCareSectionGroup(
       title: l10n.settingsReminders,
       children: [
@@ -94,8 +100,63 @@ class ReminderSection extends ConsumerWidget {
             },
           ),
         ),
+        CycleCareSettingsTile(
+          icon: Icons.wb_sunny_outlined,
+          title: l10n.settingsDailyCheckin,
+          subtitle: l10n.settingsDailyCheckinSubtitle,
+          trailing: Switch.adaptive(
+            key: const ValueKey('settings.daily_checkin.switch'),
+            value: dailyCheckinEnabled,
+            onChanged: (value) => _toggleDailyCheckin(context, ref, value),
+          ),
+        ),
+        if (dailyCheckinEnabled && !hasOngoingPeriod)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+            child: Text(
+              l10n.settingsDailyCheckinOngoingOnly,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .onSurfaceVariant,
+                  ),
+            ),
+          ),
       ],
     );
+  }
+
+  Future<void> _toggleDailyCheckin(
+      BuildContext context, WidgetRef ref, bool value) async {
+    final service = ref.read(notificationServiceProvider);
+    if (value) {
+      final granted = await service.requestPermission();
+      if (!granted) {
+        final hasPermission = await service.hasRequestPermission();
+        if (!hasPermission && context.mounted) {
+          final l10n = AppLocalizations.of(context);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.settingsNotificationPermissionDenied)),
+          );
+        }
+      }
+    }
+    await ref
+        .read(settingsRepositoryProvider)
+        .set('daily_checkin_enabled', value ? 'true' : 'false');
+    ref.invalidate(settingsProvider);
+    try {
+      if (value) {
+        final hasActive = (await ref.read(activePeriodsProvider.future))
+            .any((r) => r.endDate == null);
+        if (hasActive) {
+          final localeCode = ref.read(appLocaleCodeProvider);
+          await service.scheduleDailyPeriodCheckin(localeCode: localeCode);
+        }
+      } else {
+        await service.cancelDailyPeriodCheckin();
+      }
+    } catch (_) {}
   }
 }
 

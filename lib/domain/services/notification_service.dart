@@ -3,9 +3,12 @@ import 'package:flutter/foundation.dart';
 abstract interface class NotificationService {
   Future<void> initialize();
   Future<bool> requestPermission();
+  Future<bool> hasRequestPermission();
   Future<void> schedulePredictionReminders(
       {required DateTime windowStart, required DateTime predictedStart});
   Future<void> scheduleEndReminder({required DateTime startDate});
+  Future<void> scheduleDailyPeriodCheckin({required String localeCode});
+  Future<void> cancelDailyPeriodCheckin();
   Future<void> cancelAll();
 }
 
@@ -19,12 +22,21 @@ class UnsupportedNotificationService implements NotificationService {
   Future<bool> requestPermission() async => false;
 
   @override
+  Future<bool> hasRequestPermission() async => false;
+
+  @override
   Future<void> schedulePredictionReminders(
       {required DateTime windowStart,
       required DateTime predictedStart}) async {}
 
   @override
   Future<void> scheduleEndReminder({required DateTime startDate}) async {}
+
+  @override
+  Future<void> scheduleDailyPeriodCheckin({required String localeCode}) async {}
+
+  @override
+  Future<void> cancelDailyPeriodCheckin() async {}
 
   @override
   Future<void> cancelAll() async {}
