@@ -8,6 +8,7 @@ import '../features/auth/presentation/register_page.dart';
 import '../features/backup/presentation/backup_page.dart';
 import '../features/calendar/presentation/calendar_page.dart';
 import '../features/dashboard/presentation/dashboard_page.dart';
+import '../features/history/presentation/health_report_preview_page.dart';
 import '../features/history/presentation/history_page.dart';
 import '../features/period_form/presentation/period_form_page.dart';
 import '../features/settings/presentation/settings_page.dart';
@@ -63,6 +64,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/statistics',
         builder: (_, __) => const StatisticsPage(),
+      ),
+      GoRoute(
+        path: '/health-report',
+        builder: (_, __) => const HealthReportPreviewPage(),
       ),
       GoRoute(
         path: '/summary/:periodId',

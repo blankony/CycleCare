@@ -357,6 +357,16 @@ class AppLocalizationsId extends AppLocalizations {
   String get historyOpenStats => 'Buka statistik pribadi';
 
   @override
+  String get historyHealthReport => 'Laporan Kesehatan';
+
+  @override
+  String get historyGenerateReport => 'Buat Laporan Kesehatan';
+
+  @override
+  String get historyGenerateReportSubtitle =>
+      'Ringkasan 3 bulan · Pratinjau sebelum menyimpan atau berbagi';
+
+  @override
   String get historyFlowUnavailable =>
       'Ringkasan flow belum dapat dimuat. Catatan period tetap tersedia.';
 

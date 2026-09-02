@@ -354,6 +354,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get historyOpenStats => 'Open personal statistics';
 
   @override
+  String get historyHealthReport => 'Health Report';
+
+  @override
+  String get historyGenerateReport => 'Generate Health Report';
+
+  @override
+  String get historyGenerateReportSubtitle =>
+      '3-month summary · Preview before saving or sharing';
+
+  @override
   String get historyFlowUnavailable =>
       'Flow summary could not be loaded. Period notes remain available.';
 

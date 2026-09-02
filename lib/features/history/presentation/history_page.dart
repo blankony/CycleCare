@@ -127,6 +127,8 @@ class _HistoryContent extends StatelessWidget {
                   ),
                   const SizedBox(height: CycleCareSpacing.md),
                   const _StatisticsLink(),
+                  const SizedBox(height: CycleCareSpacing.sm),
+                  _HealthReportLink(enabled: records.isNotEmpty),
                   if (showsSync) ...[
                     const SizedBox(height: CycleCareSpacing.md),
                     CycleCareSyncBanner(
@@ -155,6 +157,41 @@ class _HistoryContent extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HealthReportLink extends StatelessWidget {
+  const _HealthReportLink({required this.enabled});
+  final bool enabled;
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return CycleCareCard(
+      onTap: enabled ? () => context.push('/health-report') : null,
+      semanticLabel: l10n.historyGenerateReport,
+      padding: const EdgeInsets.symmetric(
+        horizontal: CycleCareSpacing.md,
+        vertical: CycleCareSpacing.sm,
+      ),
+      color: context.cycleCareColors.surfaceMuted,
+      child: Row(
+        children: [
+          const SizedBox(width: 48, height: 48, child: Icon(Icons.picture_as_pdf_outlined)),
+          const SizedBox(width: CycleCareSpacing.xs),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(l10n.historyGenerateReport),
+                Text(l10n.historyGenerateReportSubtitle,
+                    style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
+          ),
+          const SizedBox(width: 48, height: 48, child: Icon(Icons.chevron_right_rounded)),
         ],
       ),
     );

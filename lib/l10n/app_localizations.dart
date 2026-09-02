@@ -722,6 +722,24 @@ abstract class AppLocalizations {
   /// **'Open personal statistics'**
   String get historyOpenStats;
 
+  /// No description provided for @historyHealthReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Health Report'**
+  String get historyHealthReport;
+
+  /// No description provided for @historyGenerateReport.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate Health Report'**
+  String get historyGenerateReport;
+
+  /// No description provided for @historyGenerateReportSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'3-month summary · Preview before saving or sharing'**
+  String get historyGenerateReportSubtitle;
+
   /// No description provided for @historyFlowUnavailable.
   ///
   /// In en, this message translates to:
