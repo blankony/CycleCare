@@ -17,6 +17,7 @@ import '../domain/entities/period_record.dart';
 import '../domain/entities/prediction.dart';
 import '../domain/entities/sync_state.dart';
 import '../domain/entities/user_cycle_settings.dart';
+import '../domain/services/home_widget_service.dart';
 import '../domain/services/backup_service.dart';
 import '../domain/services/account_deletion_service.dart';
 import '../domain/services/biometric_security_service.dart';
@@ -272,6 +273,25 @@ final settingsProvider = StreamProvider<Map<String, String?>>((ref) {
   final database = ref.watch(databaseProvider);
   return database.select(database.appSettings).watch().map(
         (rows) => {for (final row in rows) row.key: row.value},
+      );
+});
+
+final homeWidgetServiceProvider =
+    Provider<HomeWidgetService>((ref) => const HomeWidgetService());
+
+final homeWidgetSyncProvider = Provider<void>((ref) {
+  final periods = ref.watch(activePeriodsProvider).valueOrNull;
+  final prediction = ref.watch(predictionProvider).valueOrNull;
+  final fertility = ref.watch(fertilityEstimateProvider);
+  final status = ref.watch(cycleInsightsProvider).valueOrNull?.status;
+  final locale = ref.watch(settingsProvider).valueOrNull?['app_locale'] ?? 'en';
+  if (periods == null) return;
+  ref.read(homeWidgetServiceProvider).update(
+        periods: periods,
+        prediction: prediction,
+        fertility: fertility,
+        status: status,
+        localeCode: locale,
       );
 });
 

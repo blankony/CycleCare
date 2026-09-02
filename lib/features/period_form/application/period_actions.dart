@@ -212,6 +212,19 @@ class PeriodActionsController extends AsyncNotifier<void> {
     try {
       await ref.read(reminderScheduleServiceProvider).rescheduleAll();
     } catch (_) {}
+    try {
+      final periods = await ref.read(activePeriodsProvider.future);
+      final pred = await ref.read(predictionProvider.future);
+      final insights = await ref.read(cycleInsightsProvider.future);
+      final locale = ref.read(settingsProvider).valueOrNull?['app_locale'] ?? 'en';
+      await ref.read(homeWidgetServiceProvider).update(
+            periods: periods,
+            prediction: pred,
+            fertility: insights.fertility,
+            status: insights.status,
+            localeCode: locale,
+          );
+    } catch (_) {}
   }
 
   void _invalidateData() {

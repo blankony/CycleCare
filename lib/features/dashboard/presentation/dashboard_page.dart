@@ -30,6 +30,7 @@ class DashboardPage extends ConsumerWidget {
     final settings = ref.watch(userCycleSettingsProvider).valueOrNull;
     final insights = ref.watch(cycleInsightsProvider).valueOrNull;
     final syncSnapshot = ref.watch(syncSnapshotProvider);
+    ref.watch(homeWidgetSyncProvider);
 
     ref.listen(periodActionsProvider, (_, next) {
       next.whenOrNull(

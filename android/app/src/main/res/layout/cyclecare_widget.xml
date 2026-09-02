@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp"
+    android:gravity="center_vertical">
+
+    <TextView
+        android:id="@+id/widget_title"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textSize="11sp"
+        android:textColor="#03045E"
+        android:letterSpacing="0.08"
+        android:textStyle="bold"
+        tools:text="CYCLECARE" />
+
+    <TextView
+        android:id="@+id/widget_cycle_day"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:textColor="#03045E"
+        tools:text="Day 14" />
+
+    <TextView
+        android:id="@+id/widget_phase"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="2dp"
+        android:textSize="12sp"
+        android:textColor="#3A5A7A"
+        tools:text="Follicular Phase" />
+
+    <TextView
+        android:id="@+id/widget_next_period"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textSize="11sp"
+        android:textColor="#0077B6"
+        tools:text="Next: 12 Mar 2026" />
+
+</LinearLayout>
