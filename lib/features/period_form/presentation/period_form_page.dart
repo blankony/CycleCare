@@ -27,6 +27,8 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
   DateTime? _endDate;
   late final TextEditingController _notesController;
   final Map<DateTime, MenstrualFlow?> _flowChanges = {};
+  final Map<DateTime, Set<String>> _symptomChanges = {};
+  final Map<DateTime, Set<String>> _moodChanges = {};
   String? _validationMessage;
 
   PeriodRecord? get _editingRecord =>
@@ -123,6 +125,22 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                       onChanged: (date, value) => setState(
                         () => _flowChanges[DateOnly.normalize(date)] = value,
                       ),
+                      symptomChanges: _symptomChanges,
+                      moodChanges: _moodChanges,
+                      onSymptomToggle: (date, tag) => setState(() {
+                        final k = DateOnly.normalize(date);
+                        final cur = _symptomChanges[k] ?? _tagsFromLogs(existingLogs, k, true);
+                        final next = Set<String>.from(cur);
+                        if (!next.remove(tag)) next.add(tag);
+                        _symptomChanges[k] = next;
+                      }),
+                      onMoodToggle: (date, tag) => setState(() {
+                        final k = DateOnly.normalize(date);
+                        final cur = _moodChanges[k] ?? _tagsFromLogs(existingLogs, k, false);
+                        final next = Set<String>.from(cur);
+                        if (!next.remove(tag)) next.add(tag);
+                        _moodChanges[k] = next;
+                      }),
                       isLoading: editing && flowLogs.isLoading,
                       isUnavailable: editing && flowLogs.hasError,
                     ),
@@ -313,6 +331,8 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
                 ? null
                 : _notesController.text,
             flowChanges: _flowChanges,
+            symptomChanges: _symptomChanges,
+            moodChanges: _moodChanges,
           );
       final state = ref.read(periodActionsProvider);
       if (state.hasError) {
@@ -342,6 +362,18 @@ class _PeriodFormPageState extends ConsumerState<PeriodFormPage> {
       return l10n.periodFormValidationEndFuture;
     }
     return null;
+  }
+
+  Set<String> _tagsFromLogs(List<PeriodDayLogRecord> logs, DateTime key, bool isSymptom) {
+    final fmt = DateOnly.format(key);
+    for (final log in logs) {
+      if (DateOnly.format(log.logDate) == fmt) {
+        final csv = isSymptom ? log.symptomsCsv : log.moodsCsv;
+        if (csv == null || csv.isEmpty) return {};
+        return csv.split(',').toSet();
+      }
+    }
+    return {};
   }
 
   String _friendlyError(Object? error) {

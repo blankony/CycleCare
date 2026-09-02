@@ -30,7 +30,7 @@ class AppDatabase extends _$AppDatabase {
   }
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   @override
   MigrationStrategy get migration => MigrationStrategy(
@@ -56,6 +56,10 @@ class AppDatabase extends _$AppDatabase {
               'CREATE INDEX IF NOT EXISTS user_cycle_settings_sync_idx ON user_cycle_settings(user_id, updated_at)');
         },
         onUpgrade: (Migrator m, int from, int to) async {
+          if (from < 3) {
+            await m.addColumn(periodDayLogs, periodDayLogs.symptoms);
+            await m.addColumn(periodDayLogs, periodDayLogs.moods);
+          }
           if (from < 2) {
             await m.addColumn(periodEntries, periodEntries.userId);
             await m.addColumn(periodEntries, periodEntries.version);

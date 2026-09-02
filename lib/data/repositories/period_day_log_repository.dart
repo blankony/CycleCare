@@ -21,6 +21,8 @@ abstract interface class PeriodDayLogRepository {
     required String periodEntryId,
     required DateTime logDate,
     required String flow,
+    String? symptomsCsv,
+    String? moodsCsv,
   });
   Future<void> softDelete(String id);
   Future<void> softDeleteOutsideRange({
@@ -70,6 +72,8 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
     required String periodEntryId,
     required DateTime logDate,
     required String flow,
+    String? symptomsCsv,
+    String? moodsCsv,
   }) async {
     const allowed = {'SPOTTING', 'LIGHT', 'MEDIUM', 'HEAVY'};
     if (!allowed.contains(flow)) {
@@ -113,6 +117,8 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
               periodEntryId: periodEntryId,
               logDate: normalized,
               flow: flow,
+              symptoms: Value(symptomsCsv),
+              moods: Value(moodsCsv),
               createdAt: existing?.createdAt ?? now,
               updatedAt: now,
               deletedAt: const Value(null),
@@ -132,6 +138,8 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
                 'period_entry_id': periodEntryId,
                 'log_date': normalized,
                 'flow': flow,
+                'symptoms': symptomsCsv,
+                'moods': moodsCsv,
                 'created_at': existing?.createdAt ?? now,
                 'updated_at': now,
                 'deleted_at': null,
@@ -211,6 +219,8 @@ class DriftPeriodDayLogRepository implements PeriodDayLogRepository {
         periodEntryId: row.periodEntryId,
         logDate: DateOnly.parse(row.logDate),
         flow: row.flow,
+        symptomsCsv: row.symptoms,
+        moodsCsv: row.moods,
         createdAt: DateTime.parse(row.createdAt),
         updatedAt: DateTime.parse(row.updatedAt),
         deletedAt:

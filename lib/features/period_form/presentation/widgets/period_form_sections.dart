@@ -148,6 +148,10 @@ class PeriodFlowSection extends StatelessWidget {
     required this.onChanged,
     required this.isLoading,
     required this.isUnavailable,
+    this.symptomChanges = const {},
+    this.moodChanges = const {},
+    this.onSymptomToggle,
+    this.onMoodToggle,
     super.key,
   });
 
@@ -157,6 +161,10 @@ class PeriodFlowSection extends StatelessWidget {
   final void Function(DateTime, MenstrualFlow?) onChanged;
   final bool isLoading;
   final bool isUnavailable;
+  final Map<DateTime, Set<String>> symptomChanges;
+  final Map<DateTime, Set<String>> moodChanges;
+  final void Function(DateTime, String)? onSymptomToggle;
+  final void Function(DateTime, String)? onMoodToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -190,6 +198,10 @@ class PeriodFlowSection extends StatelessWidget {
                   ? flowChanges[DateOnly.normalize(days[index])]
                   : existingByDate[DateOnly.format(days[index])],
               onChanged: (value) => onChanged(days[index], value),
+              symptoms: _tagsForDay(days[index], existingLogs, symptomChanges, true),
+              moods: _tagsForDay(days[index], existingLogs, moodChanges, false),
+              onSymptomToggle: onSymptomToggle == null ? null : (t) => onSymptomToggle!(days[index], t),
+              onMoodToggle: onMoodToggle == null ? null : (t) => onMoodToggle!(days[index], t),
             ),
             if (index < days.length - 1) ...[
               const SizedBox(height: CycleCareSpacing.md),
@@ -208,12 +220,20 @@ class PeriodFlowDayEditor extends StatelessWidget {
     required this.date,
     required this.value,
     required this.onChanged,
+    this.symptoms = const {},
+    this.moods = const {},
+    this.onSymptomToggle,
+    this.onMoodToggle,
     super.key,
   });
 
   final DateTime date;
   final MenstrualFlow? value;
   final ValueChanged<MenstrualFlow?> onChanged;
+  final Set<String> symptoms;
+  final Set<String> moods;
+  final ValueChanged<String>? onSymptomToggle;
+  final ValueChanged<String>? onMoodToggle;
 
   @override
   Widget build(BuildContext context) {
@@ -270,6 +290,46 @@ class PeriodFlowDayEditor extends StatelessWidget {
               ],
             ),
           ),
+          if (onSymptomToggle != null) ...[
+            const SizedBox(height: CycleCareSpacing.sm),
+            Text('Symptoms', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 4),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                for (final s in QuickSymptom.values) ...[
+                  FilterChip(
+                    selected: symptoms.contains(s.value),
+                    label: Text(s.label),
+                    onSelected: (_) => onSymptomToggle!(s.value),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  if (s != QuickSymptom.values.last) const SizedBox(width: 6),
+                ],
+              ]),
+            ),
+          ],
+          if (onMoodToggle != null) ...[
+            const SizedBox(height: CycleCareSpacing.sm),
+            Text('Moods', style: Theme.of(context).textTheme.labelMedium),
+            const SizedBox(height: 4),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(children: [
+                for (final m in QuickMood.values) ...[
+                  FilterChip(
+                    selected: moods.contains(m.value),
+                    label: Text(m.label),
+                    onSelected: (_) => onMoodToggle!(m.value),
+                    visualDensity: VisualDensity.compact,
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  if (m != QuickMood.values.last) const SizedBox(width: 6),
+                ],
+              ]),
+            ),
+          ],
         ],
       ),
     );
@@ -350,6 +410,20 @@ class PeriodPrivacyNote extends StatelessWidget {
         ),
       );
   }
+}
+
+Set<String> _tagsForDay(DateTime day, List<PeriodDayLogRecord> logs, Map<DateTime, Set<String>> changes, bool isSymptom) {
+  final key = DateOnly.normalize(day);
+  if (changes.containsKey(key)) return changes[key]!;
+  final fmt = DateOnly.format(day);
+  for (final log in logs) {
+    if (DateOnly.format(log.logDate) == fmt) {
+      final csv = isSymptom ? log.symptomsCsv : log.moodsCsv;
+      if (csv == null || csv.isEmpty) return {};
+      return csv.split(',').toSet();
+    }
+  }
+  return {};
 }
 
 class _FlowProviderNotice extends StatelessWidget {

@@ -1730,6 +1730,17 @@ class $PeriodDayLogsTable extends PeriodDayLogs
   late final GeneratedColumn<String> flow = GeneratedColumn<String>(
       'flow', aliasedName, false,
       type: DriftSqlType.string, requiredDuringInsert: true);
+  static const VerificationMeta _symptomsMeta =
+      const VerificationMeta('symptoms');
+  @override
+  late final GeneratedColumn<String> symptoms = GeneratedColumn<String>(
+      'symptoms', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
+  static const VerificationMeta _moodsMeta = const VerificationMeta('moods');
+  @override
+  late final GeneratedColumn<String> moods = GeneratedColumn<String>(
+      'moods', aliasedName, true,
+      type: DriftSqlType.string, requiredDuringInsert: false);
   static const VerificationMeta _createdAtMeta =
       const VerificationMeta('createdAt');
   @override
@@ -1777,6 +1788,8 @@ class $PeriodDayLogsTable extends PeriodDayLogs
         periodEntryId,
         logDate,
         flow,
+        symptoms,
+        moods,
         createdAt,
         updatedAt,
         deletedAt,
@@ -1822,6 +1835,14 @@ class $PeriodDayLogsTable extends PeriodDayLogs
           _flowMeta, flow.isAcceptableOrUnknown(data['flow']!, _flowMeta));
     } else if (isInserting) {
       context.missing(_flowMeta);
+    }
+    if (data.containsKey('symptoms')) {
+      context.handle(_symptomsMeta,
+          symptoms.isAcceptableOrUnknown(data['symptoms']!, _symptomsMeta));
+    }
+    if (data.containsKey('moods')) {
+      context.handle(
+          _moodsMeta, moods.isAcceptableOrUnknown(data['moods']!, _moodsMeta));
     }
     if (data.containsKey('created_at')) {
       context.handle(_createdAtMeta,
@@ -1878,6 +1899,10 @@ class $PeriodDayLogsTable extends PeriodDayLogs
           .read(DriftSqlType.string, data['${effectivePrefix}log_date'])!,
       flow: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}flow'])!,
+      symptoms: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}symptoms']),
+      moods: attachedDatabase.typeMapping
+          .read(DriftSqlType.string, data['${effectivePrefix}moods']),
       createdAt: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}created_at'])!,
       updatedAt: attachedDatabase.typeMapping
@@ -1905,6 +1930,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
   final String periodEntryId;
   final String logDate;
   final String flow;
+  final String? symptoms;
+  final String? moods;
   final String createdAt;
   final String updatedAt;
   final String? deletedAt;
@@ -1917,6 +1944,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
       required this.periodEntryId,
       required this.logDate,
       required this.flow,
+      this.symptoms,
+      this.moods,
       required this.createdAt,
       required this.updatedAt,
       this.deletedAt,
@@ -1933,6 +1962,12 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
     map['period_entry_id'] = Variable<String>(periodEntryId);
     map['log_date'] = Variable<String>(logDate);
     map['flow'] = Variable<String>(flow);
+    if (!nullToAbsent || symptoms != null) {
+      map['symptoms'] = Variable<String>(symptoms);
+    }
+    if (!nullToAbsent || moods != null) {
+      map['moods'] = Variable<String>(moods);
+    }
     map['created_at'] = Variable<String>(createdAt);
     map['updated_at'] = Variable<String>(updatedAt);
     if (!nullToAbsent || deletedAt != null) {
@@ -1954,6 +1989,11 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
       periodEntryId: Value(periodEntryId),
       logDate: Value(logDate),
       flow: Value(flow),
+      symptoms: symptoms == null && nullToAbsent
+          ? const Value.absent()
+          : Value(symptoms),
+      moods:
+          moods == null && nullToAbsent ? const Value.absent() : Value(moods),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
       deletedAt: deletedAt == null && nullToAbsent
@@ -1976,6 +2016,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
       periodEntryId: serializer.fromJson<String>(json['periodEntryId']),
       logDate: serializer.fromJson<String>(json['logDate']),
       flow: serializer.fromJson<String>(json['flow']),
+      symptoms: serializer.fromJson<String?>(json['symptoms']),
+      moods: serializer.fromJson<String?>(json['moods']),
       createdAt: serializer.fromJson<String>(json['createdAt']),
       updatedAt: serializer.fromJson<String>(json['updatedAt']),
       deletedAt: serializer.fromJson<String?>(json['deletedAt']),
@@ -1993,6 +2035,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
       'periodEntryId': serializer.toJson<String>(periodEntryId),
       'logDate': serializer.toJson<String>(logDate),
       'flow': serializer.toJson<String>(flow),
+      'symptoms': serializer.toJson<String?>(symptoms),
+      'moods': serializer.toJson<String?>(moods),
       'createdAt': serializer.toJson<String>(createdAt),
       'updatedAt': serializer.toJson<String>(updatedAt),
       'deletedAt': serializer.toJson<String?>(deletedAt),
@@ -2008,6 +2052,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
           String? periodEntryId,
           String? logDate,
           String? flow,
+          Value<String?> symptoms = const Value.absent(),
+          Value<String?> moods = const Value.absent(),
           String? createdAt,
           String? updatedAt,
           Value<String?> deletedAt = const Value.absent(),
@@ -2020,6 +2066,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
         periodEntryId: periodEntryId ?? this.periodEntryId,
         logDate: logDate ?? this.logDate,
         flow: flow ?? this.flow,
+        symptoms: symptoms.present ? symptoms.value : this.symptoms,
+        moods: moods.present ? moods.value : this.moods,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         deletedAt: deletedAt.present ? deletedAt.value : this.deletedAt,
@@ -2038,6 +2086,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
           : this.periodEntryId,
       logDate: data.logDate.present ? data.logDate.value : this.logDate,
       flow: data.flow.present ? data.flow.value : this.flow,
+      symptoms: data.symptoms.present ? data.symptoms.value : this.symptoms,
+      moods: data.moods.present ? data.moods.value : this.moods,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
       deletedAt: data.deletedAt.present ? data.deletedAt.value : this.deletedAt,
@@ -2058,6 +2108,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
           ..write('periodEntryId: $periodEntryId, ')
           ..write('logDate: $logDate, ')
           ..write('flow: $flow, ')
+          ..write('symptoms: $symptoms, ')
+          ..write('moods: $moods, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -2069,8 +2121,20 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
   }
 
   @override
-  int get hashCode => Object.hash(id, userId, periodEntryId, logDate, flow,
-      createdAt, updatedAt, deletedAt, syncStatus, remoteUpdatedAt, version);
+  int get hashCode => Object.hash(
+      id,
+      userId,
+      periodEntryId,
+      logDate,
+      flow,
+      symptoms,
+      moods,
+      createdAt,
+      updatedAt,
+      deletedAt,
+      syncStatus,
+      remoteUpdatedAt,
+      version);
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
@@ -2080,6 +2144,8 @@ class PeriodDayLog extends DataClass implements Insertable<PeriodDayLog> {
           other.periodEntryId == this.periodEntryId &&
           other.logDate == this.logDate &&
           other.flow == this.flow &&
+          other.symptoms == this.symptoms &&
+          other.moods == this.moods &&
           other.createdAt == this.createdAt &&
           other.updatedAt == this.updatedAt &&
           other.deletedAt == this.deletedAt &&
@@ -2094,6 +2160,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
   final Value<String> periodEntryId;
   final Value<String> logDate;
   final Value<String> flow;
+  final Value<String?> symptoms;
+  final Value<String?> moods;
   final Value<String> createdAt;
   final Value<String> updatedAt;
   final Value<String?> deletedAt;
@@ -2107,6 +2175,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
     this.periodEntryId = const Value.absent(),
     this.logDate = const Value.absent(),
     this.flow = const Value.absent(),
+    this.symptoms = const Value.absent(),
+    this.moods = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
     this.deletedAt = const Value.absent(),
@@ -2121,6 +2191,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
     required String periodEntryId,
     required String logDate,
     required String flow,
+    this.symptoms = const Value.absent(),
+    this.moods = const Value.absent(),
     required String createdAt,
     required String updatedAt,
     this.deletedAt = const Value.absent(),
@@ -2140,6 +2212,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
     Expression<String>? periodEntryId,
     Expression<String>? logDate,
     Expression<String>? flow,
+    Expression<String>? symptoms,
+    Expression<String>? moods,
     Expression<String>? createdAt,
     Expression<String>? updatedAt,
     Expression<String>? deletedAt,
@@ -2154,6 +2228,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
       if (periodEntryId != null) 'period_entry_id': periodEntryId,
       if (logDate != null) 'log_date': logDate,
       if (flow != null) 'flow': flow,
+      if (symptoms != null) 'symptoms': symptoms,
+      if (moods != null) 'moods': moods,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
       if (deletedAt != null) 'deleted_at': deletedAt,
@@ -2170,6 +2246,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
       Value<String>? periodEntryId,
       Value<String>? logDate,
       Value<String>? flow,
+      Value<String?>? symptoms,
+      Value<String?>? moods,
       Value<String>? createdAt,
       Value<String>? updatedAt,
       Value<String?>? deletedAt,
@@ -2183,6 +2261,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
       periodEntryId: periodEntryId ?? this.periodEntryId,
       logDate: logDate ?? this.logDate,
       flow: flow ?? this.flow,
+      symptoms: symptoms ?? this.symptoms,
+      moods: moods ?? this.moods,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       deletedAt: deletedAt ?? this.deletedAt,
@@ -2210,6 +2290,12 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
     }
     if (flow.present) {
       map['flow'] = Variable<String>(flow.value);
+    }
+    if (symptoms.present) {
+      map['symptoms'] = Variable<String>(symptoms.value);
+    }
+    if (moods.present) {
+      map['moods'] = Variable<String>(moods.value);
     }
     if (createdAt.present) {
       map['created_at'] = Variable<String>(createdAt.value);
@@ -2243,6 +2329,8 @@ class PeriodDayLogsCompanion extends UpdateCompanion<PeriodDayLog> {
           ..write('periodEntryId: $periodEntryId, ')
           ..write('logDate: $logDate, ')
           ..write('flow: $flow, ')
+          ..write('symptoms: $symptoms, ')
+          ..write('moods: $moods, ')
           ..write('createdAt: $createdAt, ')
           ..write('updatedAt: $updatedAt, ')
           ..write('deletedAt: $deletedAt, ')
@@ -4398,6 +4486,8 @@ typedef $$PeriodDayLogsTableCreateCompanionBuilder = PeriodDayLogsCompanion
   required String periodEntryId,
   required String logDate,
   required String flow,
+  Value<String?> symptoms,
+  Value<String?> moods,
   required String createdAt,
   required String updatedAt,
   Value<String?> deletedAt,
@@ -4413,6 +4503,8 @@ typedef $$PeriodDayLogsTableUpdateCompanionBuilder = PeriodDayLogsCompanion
   Value<String> periodEntryId,
   Value<String> logDate,
   Value<String> flow,
+  Value<String?> symptoms,
+  Value<String?> moods,
   Value<String> createdAt,
   Value<String> updatedAt,
   Value<String?> deletedAt,
@@ -4445,6 +4537,12 @@ class $$PeriodDayLogsTableFilterComposer
 
   ColumnFilters<String> get flow => $composableBuilder(
       column: $table.flow, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get symptoms => $composableBuilder(
+      column: $table.symptoms, builder: (column) => ColumnFilters(column));
+
+  ColumnFilters<String> get moods => $composableBuilder(
+      column: $table.moods, builder: (column) => ColumnFilters(column));
 
   ColumnFilters<String> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnFilters(column));
@@ -4491,6 +4589,12 @@ class $$PeriodDayLogsTableOrderingComposer
   ColumnOrderings<String> get flow => $composableBuilder(
       column: $table.flow, builder: (column) => ColumnOrderings(column));
 
+  ColumnOrderings<String> get symptoms => $composableBuilder(
+      column: $table.symptoms, builder: (column) => ColumnOrderings(column));
+
+  ColumnOrderings<String> get moods => $composableBuilder(
+      column: $table.moods, builder: (column) => ColumnOrderings(column));
+
   ColumnOrderings<String> get createdAt => $composableBuilder(
       column: $table.createdAt, builder: (column) => ColumnOrderings(column));
 
@@ -4534,6 +4638,12 @@ class $$PeriodDayLogsTableAnnotationComposer
 
   GeneratedColumn<String> get flow =>
       $composableBuilder(column: $table.flow, builder: (column) => column);
+
+  GeneratedColumn<String> get symptoms =>
+      $composableBuilder(column: $table.symptoms, builder: (column) => column);
+
+  GeneratedColumn<String> get moods =>
+      $composableBuilder(column: $table.moods, builder: (column) => column);
 
   GeneratedColumn<String> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
@@ -4585,6 +4695,8 @@ class $$PeriodDayLogsTableTableManager extends RootTableManager<
             Value<String> periodEntryId = const Value.absent(),
             Value<String> logDate = const Value.absent(),
             Value<String> flow = const Value.absent(),
+            Value<String?> symptoms = const Value.absent(),
+            Value<String?> moods = const Value.absent(),
             Value<String> createdAt = const Value.absent(),
             Value<String> updatedAt = const Value.absent(),
             Value<String?> deletedAt = const Value.absent(),
@@ -4599,6 +4711,8 @@ class $$PeriodDayLogsTableTableManager extends RootTableManager<
             periodEntryId: periodEntryId,
             logDate: logDate,
             flow: flow,
+            symptoms: symptoms,
+            moods: moods,
             createdAt: createdAt,
             updatedAt: updatedAt,
             deletedAt: deletedAt,
@@ -4613,6 +4727,8 @@ class $$PeriodDayLogsTableTableManager extends RootTableManager<
             required String periodEntryId,
             required String logDate,
             required String flow,
+            Value<String?> symptoms = const Value.absent(),
+            Value<String?> moods = const Value.absent(),
             required String createdAt,
             required String updatedAt,
             Value<String?> deletedAt = const Value.absent(),
@@ -4627,6 +4743,8 @@ class $$PeriodDayLogsTableTableManager extends RootTableManager<
             periodEntryId: periodEntryId,
             logDate: logDate,
             flow: flow,
+            symptoms: symptoms,
+            moods: moods,
             createdAt: createdAt,
             updatedAt: updatedAt,
             deletedAt: deletedAt,

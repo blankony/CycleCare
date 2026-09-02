@@ -66,6 +66,8 @@ class PeriodActionsController extends AsyncNotifier<void> {
     required DateTime? endDate,
     required String? notes,
     required Map<DateTime, MenstrualFlow?> flowChanges,
+    Map<DateTime, Set<String>> symptomChanges = const {},
+    Map<DateTime, Set<String>> moodChanges = const {},
     PeriodRecord? record,
   }) async {
     state = const AsyncLoading();
@@ -111,15 +113,24 @@ class PeriodActionsController extends AsyncNotifier<void> {
         final existing = existingLogs.where(
           (log) => DateOnly.normalize(log.logDate) == date,
         );
-        if (entry.value == null) {
+        final symptoms = symptomChanges[date];
+        final moods = moodChanges[date];
+        final tagTouched = symptoms != null || moods != null;
+        if (entry.value == null && !tagTouched) {
           for (final log in existing) {
             await flowRepository.softDelete(log.id);
           }
-        } else {
+        } else if (entry.value != null || tagTouched) {
+          final flowVal = entry.value?.value ?? existing.firstOrNull?.flow ?? 'LIGHT';
+          String? symCsv = symptoms == null ? existing.firstOrNull?.symptomsCsv : (symptoms.isEmpty ? null : symptoms.join(','));
+          String? moodCsv = moods == null ? existing.firstOrNull?.moodsCsv : (moods.isEmpty ? null : moods.join(','));
+          if (entry.value == null && existing.isEmpty) continue;
           await flowRepository.save(
             periodEntryId: savedRecord.id,
             logDate: date,
-            flow: entry.value!.value,
+            flow: flowVal,
+            symptomsCsv: symCsv,
+            moodsCsv: moodCsv,
           );
         }
       }

@@ -51,6 +51,8 @@ class PeriodDayLogs extends Table {
   TextColumn get periodEntryId => text()();
   TextColumn get logDate => text()();
   TextColumn get flow => text()();
+  TextColumn get symptoms => text().nullable()();
+  TextColumn get moods => text().nullable()();
   TextColumn get createdAt => text()();
   TextColumn get updatedAt => text()();
   TextColumn get deletedAt => text().nullable()();

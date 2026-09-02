@@ -96,4 +96,43 @@ extension ReferenceComparisonText on ReferenceComparison {
       };
 }
 
+enum QuickSymptom { cramps, fatigue, bloating, headache, acne, backache }
+
+extension QuickSymptomText on QuickSymptom {
+  String get value => name.toUpperCase();
+  String get label => switch (this) {
+        QuickSymptom.cramps => 'Cramps',
+        QuickSymptom.fatigue => 'Fatigue',
+        QuickSymptom.bloating => 'Bloating',
+        QuickSymptom.headache => 'Headache',
+        QuickSymptom.acne => 'Acne',
+        QuickSymptom.backache => 'Backache',
+      };
+  static QuickSymptom? fromValue(String? v) {
+    for (final e in QuickSymptom.values) {
+      if (e.value == v) return e;
+    }
+    return null;
+  }
+}
+
+enum QuickMood { happy, anxious, moody, energetic, sad }
+
+extension QuickMoodText on QuickMood {
+  String get value => name.toUpperCase();
+  String get label => switch (this) {
+        QuickMood.happy => 'Happy',
+        QuickMood.anxious => 'Anxious',
+        QuickMood.moody => 'Moody',
+        QuickMood.energetic => 'Energetic',
+        QuickMood.sad => 'Sad',
+      };
+  static QuickMood? fromValue(String? v) {
+    for (final e in QuickMood.values) {
+      if (e.value == v) return e;
+    }
+    return null;
+  }
+}
+
 enum ProjectionCertainty { active, reduced, low }
