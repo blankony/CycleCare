@@ -76,3 +76,9 @@ macos/Pods/
 # Unsupported desktop targets
 /linux/
 /macos/
+
+# Ponytail / opencode plugin (local only, not committed)
+/opencode.json
+/package.json
+/package-lock.json
+/node_modules/
